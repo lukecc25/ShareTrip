@@ -1,0 +1,143 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: #f3f3f3;
+    color: #111;
+}
+
+/* NAVBAR */
+.navbar {
+    width: 100%;
+    height: 80px;
+    background: white;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+}
+
+.logo-area {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.logo-area img {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+}
+
+.logo-text {
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.logo-text span {
+    color: #2563eb;
+}
+
+.login-btn {
+    background: #2563eb;
+    color: white;
+    border: none;
+    padding: 16px 30px;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.login-btn:hover {
+    background: #1d4ed8;
+}
+
+/* HERO SECTION */
+.hero {
+    min-height: calc(100vh - 80px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.hero-content {
+    max-width: 900px;
+}
+
+.hero-logo {
+    width: 110px;
+    margin-bottom: 25px;
+}
+
+h1 {
+    font-size: 58px;
+    font-weight: 700;
+    margin-bottom: 24px;
+}
+
+h1 span {
+    color: #2563eb;
+}
+
+.hero p {
+    font-size: 28px;
+    line-height: 1.6;
+    color: #475569;
+    margin-bottom: 40px;
+}
+
+.cta-btn {
+    background: #2563eb;
+    color: white;
+    border: none;
+    padding: 22px 42px;
+    border-radius: 16px;
+    font-size: 28px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.cta-btn:hover {
+    background: #1d4ed8;
+    transform: translateY(-2px);
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+
+    .navbar {
+    padding: 0 20px;
+    }
+
+    .logo-text {
+    font-size: 20px;
+    }
+
+    .login-btn {
+    padding: 12px 20px;
+    font-size: 14px;
+    }
+
+    h1 {
+    font-size: 40px;
+    }
+
+    .hero p {
+    font-size: 20px;
+    }
+
+    .cta-btn {
+    font-size: 22px;
+    padding: 18px 32px;
+    }
+}
