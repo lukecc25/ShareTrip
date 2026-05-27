@@ -1,0 +1,403 @@
+/* =====================
+   Reset & Variables
+   ===================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --color-bg:            #ffffff;
+  --color-white:         #ffffff;
+  --color-primary:       #1a9de0;
+  --color-text:          #1a1a1a;
+  --color-text-muted:    #6b7280;
+  --color-input-bg:      #f0f0f0;
+  --color-border:        #e0e0e0;
+  --color-border-focus:  #1a1a1a;
+  --color-btn-inactive:  #f0f0f0;
+  --color-btn-active-border: #1a1a1a;
+  --color-cancel-bg:     #f0f0f0;
+  --color-submit-bg:     #1a1a1a;
+  --color-submit-fg:     #ffffff;
+
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --shadow-card: 0 1px 6px rgba(0, 0, 0, 0.06);
+}
+
+/* =====================
+   Base
+   ===================== */
+body {
+  font-family: var(--font);
+  background: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
+  padding-bottom: 48px;
+  font-size: 14px;
+}
+
+/* =====================
+   Page Header
+   ===================== */
+.page-header {
+  padding: 24px 20px 10px;
+}
+
+.page-header h1 {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+/* =====================
+   Form Layout
+   ===================== */
+.post-form {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-section {
+  background: var(--color-white);
+  border-radius: var(--radius-md);
+  padding: 20px 18px;
+  border: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* =====================
+   Post Type Buttons
+   ===================== */
+.section-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.post-type-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.type-btn {
+  flex: 1;
+  padding: 20px 16px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-btn-inactive);
+  color: var(--color-text);
+  font-family: var(--font);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.type-btn.active {
+  border-color: var(--color-btn-active-border);
+  border-width: 2px;
+  background: var(--color-btn-inactive);
+}
+
+/* =====================
+   Labels & Inputs
+   ===================== */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.input-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.form-input {
+  background: var(--color-input-bg);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 0.9rem;
+  font-family: var(--font);
+  color: var(--color-text);
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s;
+}
+
+.form-input::placeholder {
+  color: #adb5bd;
+}
+
+.form-input:focus {
+  border-color: var(--color-border-focus);
+}
+
+/* =====================
+   Input Row (2 columns)
+   ===================== */
+.input-row {
+  display: flex;
+  gap: 14px;
+  align-items: flex-end;
+}
+
+/* =====================
+   Flexible Day Toggle
+   ===================== */
+.flexible-day-group {
+  display: flex;
+  align-items: center;
+  padding-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.toggle-input { display: none; }
+
+.toggle-switch {
+  width: 38px;
+  height: 22px;
+  background: #d0d0d0;
+  border-radius: 999px;
+  position: relative;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.15s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.toggle-input:checked + .toggle-switch {
+  background: var(--color-text);
+}
+
+.toggle-input:checked + .toggle-switch::after {
+  transform: translateX(16px);
+}
+
+/* =====================
+   Select
+   ===================== */
+.form-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' stroke='%236b7280' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+  cursor: pointer;
+}
+
+/* =====================
+   $ Prefix Input
+   ===================== */
+.input-prefix-wrap {
+  position: relative;
+}
+
+.input-prefix {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.form-input.with-prefix {
+  padding-left: 26px;
+}
+
+/* =====================
+   Text area
+   ===================== */
+.form-textarea {
+  resize: vertical;
+  min-height: 72px;
+  line-height: 1.5;
+}
+
+/* =====================
+   Action Buttons
+   ===================== */
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+.action-btn:active {
+  filter: brightness(0.9);
+}
+
+.cancel-post {
+  background: var(--color-cancel-bg);
+  color: var(--color-text);
+}
+
+.submit-post {
+  background: var(--color-submit-bg);
+  color: var(--color-submit-fg);
+}
+
+/* =====================
+   Show / Hide by post type
+   Toggle .hidden via JS to show/hide sections
+   ===================== */
+.hidden {
+  display: none;
+}
+
+/* =====================
+   Responsive: Desktop (769px+)
+   ===================== */
+@media (min-width: 769px) {
+  body {
+    background: #f5f5f5;
+    padding-bottom: 64px;
+  }
+
+  .page-header {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 36px 16px 12px;
+  }
+
+  .page-header h1 {
+    font-size: 1.6rem;
+  }
+
+  .post-form {
+    gap: 20px;
+  }
+
+  .form-section {
+    padding: 24px 22px;
+    gap: 18px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  }
+
+  .type-btn {
+    padding: 24px 20px;
+    font-size: 1.05rem;
+  }
+
+  .form-input {
+    padding: 13px 16px;
+    font-size: 0.95rem;
+  }
+
+  .action-btn {
+    padding: 15px;
+    font-size: 1rem;
+  }
+}
+
+/* =====================
+   Responsive: Mobile (max 480px)
+   ===================== */
+@media (max-width: 480px) {
+  body {
+    font-size: 15px;
+  }
+
+  .page-header {
+    padding: 20px 16px 8px;
+  }
+
+  .page-header h1 {
+    font-size: 1.2rem;
+  }
+
+  .post-form {
+    padding: 0 12px;
+    gap: 12px;
+  }
+
+  .form-section {
+    padding: 16px 14px;
+    gap: 14px;
+  }
+
+  /* Stack input rows vertically on small screens */
+  .input-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  /* Keep middle stop + flexible day side by side */
+  .locations .input-row {
+    flex-direction: row;
+    align-items: flex-end;
+  }
+
+  .type-btn {
+    padding: 18px 10px;
+    font-size: 0.95rem;
+  }
+
+  .form-input {
+    padding: 13px 12px;
+    font-size: 1rem; /* Prevents iOS auto-zoom on focus */
+  }
+
+  .flexible-day-group {
+    padding-bottom: 13px;
+  }
+
+  .action-btn {
+    padding: 15px;
+    font-size: 1rem;
+  }
+}
