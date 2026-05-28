@@ -1,0 +1,10 @@
+node_modules/
+server/node_modules/
+server/database/*.db
+server/data/local-store.json
+server/data/sessions/
+server/data/ride-posts/*
+!server/data/ride-posts/.gitkeep
+!server/data/ride-posts/README.txt
+.env
+server/.env

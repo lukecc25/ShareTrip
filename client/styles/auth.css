@@ -1,0 +1,143 @@
+.auth-page,
+.profile-page {
+    min-height: calc(100vh - 80px);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 420px;
+    gap: 56px;
+    align-items: center;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 48px 24px;
+}
+
+body.auth-body {
+    position: relative;
+    min-height: 100vh;
+    background: #0f172a;
+}
+
+body.auth-body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(rgba(15, 23, 42, 0.48), rgba(15, 23, 42, 0.48)),
+        url("/images/derwiki-road-1958388_1920.webp") center / cover fixed no-repeat;
+}
+
+#navbar-root,
+.auth-page,
+.profile-page {
+    position: relative;
+    z-index: 1;
+}
+
+.auth-intro {
+    max-width: 560px;
+}
+
+.auth-logo {
+    width: 86px;
+    margin-bottom: 22px;
+}
+
+.auth-intro h1 {
+    font-size: 52px;
+    margin-bottom: 18px;
+    color: white;
+}
+
+.auth-intro h1 span {
+    color: #93c5fd;
+}
+
+.auth-intro p {
+    color: white;
+    font-size: 22px;
+    line-height: 1.55;
+}
+
+.auth-panel,
+.profile-panel {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+    padding: 28px;
+}
+
+.auth-form,
+.profile-form {
+    display: grid;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.auth-form label,
+.profile-form label {
+    color: #334155;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 7px;
+    display: block;
+}
+
+.auth-form input,
+.auth-form select,
+.profile-form input,
+.profile-form select {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font: inherit;
+}
+
+.auth-form button,
+.profile-form button {
+    width: 100%;
+    padding: 13px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+}
+
+.auth-form button:hover,
+.profile-form button:hover {
+    background: #1d4ed8;
+}
+
+.message {
+    text-align: center;
+    color: #166534;
+    margin-bottom: 18px;
+    font-weight: 700;
+}
+
+.message.error {
+    color: #b91c1c;
+}
+
+@media (max-width: 820px) {
+    .auth-page,
+    .profile-page {
+        grid-template-columns: 1fr;
+        gap: 28px;
+    }
+
+    .auth-intro {
+        text-align: center;
+        margin: 0 auto;
+    }
+}

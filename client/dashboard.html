@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | ShareTrip</title>
+  <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/style.css">
+  <link rel="stylesheet" href="/styles/dashboard.css">
+</head>
+<body>
+  <div id="navbar-root"></div>
+
+  <main class="dashboard-page">
+    <section class="dashboard-header">
+      <div>
+        <p class="eyebrow" id="welcome-eyebrow">Welcome</p>
+        <h1>Ride Board</h1>
+        <p>Browse every ride offer and request currently shared by the community.</p>
+      </div>
+      <a href="/dashboard.html?showForm=1#createRideForm" class="create-ride-btn" id="create-ride-link">Create Ride</a>
+    </section>
+
+    <div id="notification-banner" class="notification-banner" hidden></div>
+    <div id="dashboard-message" class="dashboard-message" hidden></div>
+
+    <section class="ride-filter-panel" id="ride-filter-panel" aria-label="Ride filters">
+      <div class="ride-filter-tabs">
+        <a href="/dashboard.html?scope=all" id="filter-all" data-scope="all">All Rides</a>
+        <a href="/dashboard.html?scope=my" id="filter-my" data-scope="my">My Rides</a>
+      </div>
+
+      <form class="ride-search-form" id="searchForm">
+        <input type="hidden" name="scope" id="search-scope" value="all">
+        <label for="rideSearch">Search rides</label>
+        <div class="ride-search-row">
+          <input id="rideSearch" type="search" name="q" placeholder="Origin, destination, or people">
+          <button type="submit">Search</button>
+        </div>
+        <a href="#" class="clear-search-link" id="clear-search" hidden>Clear search</a>
+      </form>
+    </section>
+
+    <div id="ride-form-container"></div>
+
+    <div id="rides-container">
+      <section class="empty-rides" id="rides-loading">
+        <h2>Loading rides…</h2>
+        <p>Please wait while we fetch the ride board.</p>
+      </section>
+    </div>
+  </main>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script src="/js/notifications.js"></script>
+  <script src="/js/dashboard-page.js" defer></script>
+</body>
+</html>
