@@ -1,0 +1,13 @@
+{
+  "name": "sharetrip",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ShareTrip project",
+  "scripts": {
+    "install": "npm install --prefix server",
+    "dev": "npm run dev --prefix server",
+    "start": "npm run start --prefix server",
+    "data:reset": "npm run data:reset --prefix server",
+    "data:seed": "npm run data:seed --prefix server"
+  }
+}

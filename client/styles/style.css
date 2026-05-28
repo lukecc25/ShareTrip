@@ -10,7 +10,6 @@ body {
     color: #111;
 }
 
-/* NAVBAR */
 .navbar {
     width: 100%;
     height: 80px;
@@ -26,6 +25,8 @@ body {
     display: flex;
     align-items: center;
     gap: 14px;
+    text-decoration: none;
+    color: inherit;
 }
 
 .logo-area img {
@@ -53,13 +54,31 @@ body {
     font-weight: 600;
     cursor: pointer;
     transition: 0.2s ease;
+    display: inline-block;
+    text-decoration: none;
 }
 
 .login-btn:hover {
     background: #1d4ed8;
 }
 
-/* HERO SECTION */
+.nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.nav-link {
+    color: #334155;
+    font-size: 16px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.nav-link:hover {
+    color: #2563eb;
+}
+
 .hero {
     min-height: calc(100vh - 80px);
     display: flex;
@@ -67,10 +86,14 @@ body {
     justify-content: center;
     text-align: center;
     padding: 40px 20px;
+    background:
+        linear-gradient(rgba(15, 23, 42, 0.42), rgba(15, 23, 42, 0.42)),
+        url("/images/color_hope-sunset-6516870_1920.webp") center / cover no-repeat;
 }
 
 .hero-content {
     max-width: 900px;
+    color: white;
 }
 
 .hero-logo {
@@ -78,21 +101,24 @@ body {
     margin-bottom: 25px;
 }
 
-h1 {
+.hero h1 {
     font-size: 58px;
     font-weight: 700;
     margin-bottom: 24px;
+    color: white;
 }
 
-h1 span {
-    color: #2563eb;
+.hero h1 span {
+    color: #93c5fd;
 }
 
-.hero p {
+.hero h3 {
     font-size: 28px;
     line-height: 1.6;
-    color: #475569;
+    color: white;
     margin-bottom: 40px;
+    font-weight: 400;
+    text-shadow: 0 2px 14px rgba(15, 23, 42, 0.35);
 }
 
 .cta-btn {
@@ -105,6 +131,8 @@ h1 span {
     font-weight: 700;
     cursor: pointer;
     transition: 0.2s ease;
+    text-decoration: none;
+    display: inline-block;
 }
 
 .cta-btn:hover {
@@ -112,32 +140,38 @@ h1 span {
     transform: translateY(-2px);
 }
 
-/* RESPONSIVE */
 @media (max-width: 768px) {
-
     .navbar {
-    padding: 0 20px;
+        padding: 0 20px;
     }
 
     .logo-text {
-    font-size: 20px;
+        font-size: 20px;
     }
 
     .login-btn {
-    padding: 12px 20px;
-    font-size: 14px;
+        padding: 12px 20px;
+        font-size: 14px;
     }
 
-    h1 {
-    font-size: 40px;
+    .nav-actions {
+        gap: 10px;
     }
 
-    .hero p {
-    font-size: 20px;
+    .nav-link {
+        font-size: 14px;
+    }
+
+    .hero h1 {
+        font-size: 40px;
+    }
+
+    .hero h3 {
+        font-size: 20px;
     }
 
     .cta-btn {
-    font-size: 22px;
-    padding: 18px 32px;
+        font-size: 22px;
+        padding: 18px 32px;
     }
 }

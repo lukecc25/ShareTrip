@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Complete Profile | ShareTrip</title>
+  <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/style.css">
+  <link rel="stylesheet" href="/styles/auth.css">
+</head>
+<body class="auth-body">
+  <div id="navbar-root"></div>
+
+  <main class="profile-page">
+    <section class="auth-intro">
+      <img src="/images/sharetrip_logo.webp" alt="ShareTrip Logo" class="auth-logo">
+      <h1>Share<span>Trip</span></h1>
+      <p>Complete your profile so other members can find and join your rides.</p>
+    </section>
+
+    <section class="profile-panel">
+      <h2 style="margin-bottom: 16px; color: #0f172a;">Your profile</h2>
+      <div id="profile-message" class="message" hidden></div>
+      <form id="profileForm" class="profile-form">
+        <div class="form-row">
+          <div>
+            <label for="fname">First Name</label>
+            <input id="fname" name="fname" type="text" required>
+          </div>
+          <div>
+            <label for="lname">Last Name</label>
+            <input id="lname" name="lname" type="text" required>
+          </div>
+        </div>
+        <label for="phone">Phone</label>
+        <input id="phone" name="phone" type="tel" required>
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" required>
+        <label for="gender">Gender</label>
+        <select id="gender" name="gender" required>
+          <option value="">Select Gender</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+        </select>
+        <button type="submit">Save and continue</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script src="/js/profile-page.js"></script>
+</body>
+</html>
