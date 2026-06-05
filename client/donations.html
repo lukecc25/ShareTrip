@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support ShareTrip | ShareTrip</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/style.css?v=5">
+    <link rel="stylesheet" href="styles/dashboard.css?v=25">
+</head>
+<body>
+    <div id="navbar-root"></div>
+    
+    <main class="donation-page">
+        <a href="index.html" class="back-link">Back to Ride Board</a>
+
+        <div class="dashboard-message" id="donationMessage" hidden></div>
+
+        <section class="detail-card donation-hero">
+            <div>
+                <p class="eyebrow">Demo Only</p>
+                <h1>Support ShareTrip</h1>
+                <p>This school project demo does not process real payments. Demo donations are optional and do not affect access to the site.</p>
+            </div>
+            <span class="demo-badge">No payment charged</span>
+        </section>
+
+        <section class="donation-grid">
+            <article class="detail-card detail-section">
+                <div class="section-heading">
+                    <h2>Choose an Amount</h2>
+                    <span>Demo</span>
+                </div>
+
+                <form class="donation-form" id="donationForm">
+                    <fieldset class="donation-amounts">
+                        <legend>Donation amount</legend>
+                        <label>
+                            <input type="radio" name="amount_choice" value="1">
+                            <span>$1</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="amount_choice" value="3">
+                            <span>$3</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="amount_choice" value="5">
+                            <span>$5</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="amount_choice" value="10">
+                            <span>$10</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="amount_choice" value="20">
+                            <span>$20</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="amount_choice" value="custom" id="customAmountChoice">
+                            <span>Custom</span>
+                        </label>
+                    </fieldset>
+
+                    <label>
+                        <span>Custom amount</span>
+                        <input type="number" name="custom_amount" id="customAmountInput" min="0.01" step="0.01" placeholder="Any amount">
+                    </label>
+
+                    <label>
+                        <span>Optional note</span>
+                        <input type="text" name="note" maxlength="255" id="donationNote" placeholder="Thanks for keeping ShareTrip going">
+                    </label>
+
+                    <div class="demo-payment-method">
+                        <strong>Payment method</strong>
+                        <span>Demo Only</span>
+                    </div>
+
+                    <p class="donation-disclaimer">Donations are optional and do not affect posting rides, joining rides, viewing profiles, or using any part of ShareTrip.</p>
+
+                    <button type="submit" class="primary-small-button">Support ShareTrip</button>
+                </form>
+            </article>
+
+            <aside class="detail-card detail-section">
+                <div class="section-heading">
+                    <h2>Demo Donations</h2>
+                    <span id="demoTotal">$0.00</span>
+                </div>
+
+                <div class="donation-history-list" id="donationHistory"></div>
+                <p class="no-comments" id="emptyHistory">No demo donations yet.</p>
+            </aside>
+        </section>
+    </main>
+
+    
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/navbar.js"></script>
+    <script>
+      (async () => {
+        // Renders the modern, dynamic navbar into #navbar-root
+        await ShareTripNavbar.renderNavbar();
+      })();
+    </script>
+
+    <script>
+        const form = document.getElementById("donationForm");
+        const message = document.getElementById("donationMessage");
+        const customAmountInput = document.getElementById("customAmountInput");
+        const customAmountChoice = document.getElementById("customAmountChoice");
+        const donationHistory = document.getElementById("donationHistory");
+        const emptyHistory = document.getElementById("emptyHistory");
+        const demoTotal = document.getElementById("demoTotal");
+        const demoDonations = [];
+
+        function formatCurrency(amount) {
+            return "$" + amount.toFixed(2);
+        }
+
+        function renderHistory() {
+            donationHistory.innerHTML = "";
+            const total = demoDonations.reduce((sum, donation) => sum + donation.amount, 0);
+            demoTotal.textContent = formatCurrency(total);
+            emptyHistory.hidden = demoDonations.length > 0;
+
+            demoDonations.forEach(function (donation) {
+                const item = document.createElement("article");
+                item.className = "donation-history-item";
+                item.innerHTML =
+                    "<div><strong>" + formatCurrency(donation.amount) + "</strong><span>" + donation.date + "</span></div>" +
+                    "<small>Demo Only - Demo</small>" +
+                    (donation.note ? "<p></p>" : "");
+
+                if (donation.note) {
+                    item.querySelector("p").textContent = donation.note;
+                }
+
+                donationHistory.appendChild(item);
+            });
+        }
+
+        if (customAmountInput && customAmountChoice) {
+            customAmountInput.addEventListener("input", function () {
+                customAmountChoice.checked = true;
+            });
+        }
+
+        form.addEventListener("submit", function (event) {
+            event.preventDefault();
+
+            const selectedAmount = form.querySelector("input[name='amount_choice']:checked");
+            const note = document.getElementById("donationNote").value.trim();
+            let amount = 0;
+
+            if (selectedAmount && selectedAmount.value === "custom") {
+                amount = Number(customAmountInput.value);
+            } else if (selectedAmount) {
+                amount = Number(selectedAmount.value);
+            }
+
+            if (!amount || amount <= 0) {
+                message.hidden = false;
+                message.className = "dashboard-message error";
+                message.textContent = "Please choose a donation amount greater than $0.";
+                return;
+            }
+
+            demoDonations.unshift({
+                amount,
+                note,
+                date: new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+            });
+
+            renderHistory();
+            message.hidden = false;
+            message.className = "dashboard-message";
+            message.textContent = "Thank you for supporting ShareTrip. This was a demo donation, so no payment was charged.";
+            form.reset();
+        });
+
+        renderHistory();
+    </script>
+</body>
+</html>

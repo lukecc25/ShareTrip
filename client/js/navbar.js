@@ -28,6 +28,11 @@ async function renderNavbar(active = "") {
     dashboardLink.className = `nav-link${active === "dashboard" ? " active" : ""}`;
     dashboardLink.textContent = "Dashboard";
 
+    const donationLink = document.createElement("a");
+    donationLink.href = "/donations.html";
+    donationLink.className = `nav-link${active === "donations" ? " active" : ""}`;
+    donationLink.textContent = "Donate";
+
     const logoutBtn = document.createElement("button");
     logoutBtn.type = "button";
     logoutBtn.className = "login-btn";
@@ -35,6 +40,7 @@ async function renderNavbar(active = "") {
     logoutBtn.addEventListener("click", () => ShareTripAuth.logout());
 
     container.appendChild(dashboardLink);
+    container.appendChild(donationLink);
     container.appendChild(logoutBtn);
     return;
   }
