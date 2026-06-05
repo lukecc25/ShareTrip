@@ -204,14 +204,14 @@ function renderRideForm(ride) {
         <div class="ride-type-selector">
           <p class="ride-type-selector-label">What would you like to do?</p>
           <div class="ride-type-cards">
-            <button type="button" class="ride-type-card ${!ride || ride.ride_type === 'offer' ? 'active' : ''}" data-type="offer">
-              <strong>Offer a Ride</strong>
-            </button>
-            <button type="button" class="ride-type-card ${ride?.ride_type === 'request' ? 'active' : ''}" data-type="request">
-              <strong>Request a Ride</strong>
-            </button>
-          </div>
-          <input type="hidden" name="rideType" id="rideType" value="${ride?.ride_type ?? 'offer'}">
+            <button type="button" class="ride-type-card ${ride?.ride_type === 'offer' ? 'active' : ''}" data-type="offer">
+            <strong>Offer a Ride</strong>
+          </button>
+          <button type="button" class="ride-type-card ${ride?.ride_type === 'request' ? 'active' : ''}" data-type="request">
+            <strong>Request a Ride</strong>
+          </button>
+        </div>
+        <input type="hidden" name="rideType" id="rideType" value="${ride?.ride_type ?? ''}">
         </div>
         <div class="form-row">
           <div>
@@ -232,15 +232,15 @@ function renderRideForm(ride) {
             <input type="date" name="endDate" value="${escapeHtml(ride?.end_date ?? "")}" class="date-input">
           </div>
         </div>
-        <div class="form-row single-column">
+        <div class="form-row">
           <div>
             <label>Pickup Time</label>
             <input type="time" name="startTime" value="${escapeHtml(ride?.start_time ?? "")}">
           </div>
-        </div>
-        <div class="flexible-row">
-          <input type="checkbox" name="flexible" id="flexible" value="1" ${ride?.flexible ? "checked" : ""}>
-          <label for="flexible">Flexible on time</label>
+          <div class="flexible-row" style="align-self: end; padding-bottom: 12px;">
+            <input type="checkbox" name="flexible" id="flexible" value="1" ${ride?.flexible ? "checked" : ""}>
+            <label for="flexible">Flexible on time</label>
+          </div>
         </div>
         <div class="form-row">
           <div>
@@ -252,10 +252,13 @@ function renderRideForm(ride) {
             <input type="text" name="destination" maxlength="75" value="${escapeHtml(ride?.destination ?? "")}" required>
           </div>
         </div>
-        <div class="form-row offer-only-fields">
-          <div class="offer-only-field">
+        <div class="offer-only-field">
             <label>Total Cost</label>
-            <input type="number" name="rideCost" min="0" step="0.01" value="${escapeHtml(ride?.ride_cost ?? "")}" required>
+            <div class="input-with-prefix">
+              <span class="input-prefix">$</span>
+              <input type="number" name="rideCost" min="0" step="0.01" value="${escapeHtml(ride?.ride_cost ?? "")}" required>
+            </div>
+            <p class="field-hint">Avg gas cost: ~$0.14/mi (5mi: $0.70 · 10mi: $1.40 · 30mi: $4.20 · 50mi: $7.00)</p>
           </div>
           <div class="offer-only-field">
             <label>Seats</label>
@@ -408,12 +411,20 @@ function initRideFormControls() {
 
   function updateEndDateField() {
     const isRoundTrip = tripType.value === "roundtrip";
-    endDateField.style.display = isRoundTrip ? "block" : "none";
-    endDateInput.required = isRoundTrip;
+    endDateField.style.display = isRoundTrip ? "block" : "none";    endDateInput.required = isRoundTrip;
   }
 
   function updateOfferFields() {
     const isOffer = rideType.value === "offer";
+    const isSelected = rideType.value !== "";
+    const formRows = document.querySelectorAll(
+      "#rideForm .form-row:not(.ride-type-selector), #rideForm .flexible-row, #rideForm button[type='submit']"
+    );
+
+    formRows.forEach((el) => {
+      el.style.display = isSelected ? "" : "none";
+    });
+
     offerFields.forEach((fieldGroup) => {
       fieldGroup.style.display = isOffer ? "grid" : "none";
       fieldGroup.querySelectorAll("input, select").forEach((field) => {
