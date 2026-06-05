@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS accounts (
     email TEXT NOT NULL UNIQUE,
     phone TEXT,
     gender TEXT NOT NULL CHECK (gender IN ('Male', 'Female')),
+    able_driver INTEGER NOT NULL DEFAULT 1 CHECK (able_driver IN (0, 1)),
     password_hash TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP

@@ -72,6 +72,31 @@ function routeIconSvg(roundtrip) {
   </svg>`;
 }
 
+const HIDE_REQUEST_RIDES_KEY = "sharetrip-hide-request-rides";
+
+function ableDriverClass(isAble) {
+  return isAble ? "able-driver" : "not-able-driver";
+}
+
+function isAbleDriver(profile) {
+  return profile?.able_driver !== false && profile?.able_driver !== 0;
+}
+
+function loadHideRequestRidesPreference(profile) {
+  if (isAbleDriver(profile)) {
+    return false;
+  }
+  const stored = localStorage.getItem(HIDE_REQUEST_RIDES_KEY);
+  if (stored === null) {
+    return true;
+  }
+  return stored === "1";
+}
+
+function saveHideRequestRidesPreference(hide) {
+  localStorage.setItem(HIDE_REQUEST_RIDES_KEY, hide ? "1" : "0");
+}
+
 function readQuery() {
   return new URLSearchParams(window.location.search);
 }
@@ -95,6 +120,10 @@ window.ShareTripUtils = {
   rideTypeLabel,
   fullName,
   routeIconSvg,
+  ableDriverClass,
+  isAbleDriver,
+  loadHideRequestRidesPreference,
+  saveHideRequestRidesPreference,
   readQuery,
   setQuery,
 };

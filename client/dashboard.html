@@ -33,15 +33,21 @@
         <a href="/dashboard.html?scope=my" id="filter-my" data-scope="my">My Rides</a>
       </div>
 
-      <form class="ride-search-form" id="searchForm">
-        <input type="hidden" name="scope" id="search-scope" value="all">
-        <label for="rideSearch">Search rides</label>
-        <div class="ride-search-row">
-          <input id="rideSearch" type="search" name="q" placeholder="Origin, destination, or people">
-          <button type="submit">Search</button>
-        </div>
-        <a href="#" class="clear-search-link" id="clear-search" hidden>Clear search</a>
-      </form>
+      <div class="ride-filter-controls">
+        <form class="ride-search-form" id="searchForm">
+          <input type="hidden" name="scope" id="search-scope" value="all">
+          <label for="rideSearch">Search rides</label>
+          <div class="ride-search-row">
+            <input id="rideSearch" type="search" name="q" placeholder="Origin, destination, or people">
+            <button type="submit">Search</button>
+          </div>
+          <a href="#" class="clear-search-link" id="clear-search" hidden>Clear search</a>
+        </form>
+        <label class="ride-filter-toggle" id="hide-request-rides-filter" hidden>
+          <input type="checkbox" checked>
+          Hide driver requests
+        </label>
+      </div>
     </section>
 
     <div id="ride-form-container"></div>

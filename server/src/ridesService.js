@@ -401,6 +401,78 @@ async function getUserRatingStats(userId) {
   return getUserRatingStatsFromStore(store, userId);
 }
 
+function getUserRoleOnRide(store, ride, userId) {
+  if (ride.owner_id === userId) {
+    return ride.ride_type === "offer" ? "driver" : "owner";
+  }
+  if (ride.assigned_driver_id === userId) {
+    return "driver";
+  }
+  if (
+    store.passengers.some(
+      (p) => Number(p.ride_id) === Number(ride.id) && p.user_id === userId
+    )
+  ) {
+    return "passenger";
+  }
+  return null;
+}
+
+async function getUserProfileOverview(userId) {
+  const store = await readStore();
+  const account = findAccount(store, userId);
+  if (!account) {
+    return null;
+  }
+
+  const stats = {
+    ...getUserRatingStatsFromStore(store, userId),
+    able_driver: (account.able_driver ?? 1) === 1,
+  };
+
+  const reviews = store.ratings
+    .filter((r) => r.rated_user_id === userId)
+    .map((r) => {
+      const rater = findAccount(store, r.rater_user_id);
+      const ride = findRide(store, r.ride_id);
+      return {
+        id: r.id,
+        rating: r.rating,
+        comment: r.comment,
+        role: r.role,
+        created_at: r.created_at,
+        rater_fname: rater?.fname ?? "",
+        rater_lname: rater?.lname ?? "",
+        ride_id: r.ride_id,
+        ride_origin: ride?.origin ?? "",
+        ride_destination: ride?.destination ?? "",
+        ride_start_date: ride?.start_date ?? "",
+      };
+    })
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+  const t = today();
+  const tripHistory = store.rides
+    .filter((ride) => {
+      if (ride.start_date >= t) {
+        return false;
+      }
+      return getUserRoleOnRide(store, ride, userId) !== null;
+    })
+    .map((ride) => ({
+      ...enrichRide(ride, userId, store),
+      user_role: getUserRoleOnRide(store, ride, userId),
+    }))
+    .sort((a, b) => b.start_date.localeCompare(a.start_date));
+
+  return {
+    profile: await authService.getAccountById(userId),
+    stats,
+    reviews,
+    trip_history: tripHistory,
+  };
+}
+
 async function getRideDetail(rideId, currentUserId) {
   const ride = await getRideById(rideId, currentUserId);
   if (!ride) {
@@ -722,6 +794,7 @@ async function respondToDriverOffer(rideId, offerId, ownerId, accept) {
 module.exports = {
   getProfile,
   upsertProfile,
+  getUserProfileOverview,
   listRides,
   getRideById,
   getRideDetail,
