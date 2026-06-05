@@ -187,6 +187,8 @@ async function saveRide(ownerId, payload) {
   const endDate = roundtrip ? payload.endDate : startDate;
   const seats = isOffer ? Math.max(1, Number(payload.seats) || 1) : 1;
   const rideCost = isOffer ? Math.max(0, Number(payload.rideCost) || 0) : 0;
+  const flexible = payload.flexible === true || payload.flexible === "true" || payload.flexible === 1;
+  const startTime = payload.startTime || null;
   const genderPreference = isOffer
     ? normalizeGenderPreference(payload.genderPreference)
     : "No preference";
@@ -212,6 +214,8 @@ async function saveRide(ownerId, payload) {
         destination: payload.destination,
         ride_cost: rideCost,
         gender_preference: genderPreference,
+        flexible,
+        start_time: startTime,
         updated_at: timestamp,
       };
       return payload.rideId;
@@ -230,6 +234,9 @@ async function saveRide(ownerId, payload) {
       destination: payload.destination,
       ride_cost: rideCost,
       gender_preference: genderPreference,
+      flexible,
+      start_time: startTime,
+      end_time: endTime,
       assigned_driver_id: null,
       created_at: timestamp,
       updated_at: timestamp,

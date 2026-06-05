@@ -136,11 +136,15 @@ function renderRideCard(ride) {
       ? '<span class="ride-time-status">Past</span>'
       : "";
 
+  const flexibleBadge = ride.flexible
+    ? '<span class="flexible-badge">Flexible</span>'
+    : "";
+
   const offerDetails = isOffer
     ? `
       <div>
         <span>Passenger Seats</span>
-        <strong>${escapeHtml(remainingSeats)}/${escapeHtml(totalSeats)}</strong>
+        <strong>${escapeHtml(remainingSeats)}/${escapeHtml(totalSeats)} Seats Available</strong>
       </div>
       <div>
         <span>Cost</span>
@@ -156,11 +160,12 @@ function renderRideCard(ride) {
     : "";
 
   return `
-    <article class="ride-card" id="ride-${ride.id}">
+    <article class="ride-card ride-card--${typeClass}" id="ride-${ride.id}">
       <div class="ride-card-top">
         <div class="ride-card-badges">
           <span class="ride-type ${typeClass}">${escapeHtml(typeLabel)}</span>
           ${pastBadge}
+          ${flexibleBadge}
         </div>
         ${priceBlock}
       </div>
@@ -172,6 +177,7 @@ function renderRideCard(ride) {
       <div class="ride-details">
         <div><span>Start</span><strong>${escapeHtml(formatDateValue(ride.start_date))}</strong></div>
         <div><span>End</span><strong>${escapeHtml(formatDateValue(ride.end_date))}</strong></div>
+        ${ride.start_time ? `<div><span>Pickup Time</span><strong>${escapeHtml(ride.start_time)}</strong></div>` : ""}
         ${offerDetails}
         <div><span>Preference</span><strong>${escapeHtml(ride.gender_preference)}</strong></div>
       </div>
@@ -195,14 +201,19 @@ function renderRideForm(ride) {
       </div>
       <form class="ride-form" id="rideForm">
         <input type="hidden" name="rideId" value="${ride?.id ?? ""}">
-        <div class="form-row">
-          <div>
-            <label for="rideType">Request or Offer</label>
-            <select name="rideType" id="rideType" required>
-              <option value="offer" ${ride?.ride_type === "offer" ? "selected" : ""}>Offer</option>
-              <option value="request" ${ride?.ride_type === "request" ? "selected" : ""}>Request</option>
-            </select>
+        <div class="ride-type-selector">
+          <p class="ride-type-selector-label">What would you like to do?</p>
+          <div class="ride-type-cards">
+            <button type="button" class="ride-type-card ${!ride || ride.ride_type === 'offer' ? 'active' : ''}" data-type="offer">
+              <strong>Offer a Ride</strong>
+            </button>
+            <button type="button" class="ride-type-card ${ride?.ride_type === 'request' ? 'active' : ''}" data-type="request">
+              <strong>Request a Ride</strong>
+            </button>
           </div>
+          <input type="hidden" name="rideType" id="rideType" value="${ride?.ride_type ?? 'offer'}">
+        </div>
+        <div class="form-row">
           <div>
             <label for="tripType">Trip Type</label>
             <select name="tripType" id="tripType" required>
@@ -214,16 +225,26 @@ function renderRideForm(ride) {
         <div class="form-row">
           <div>
             <label>Start Date</label>
-            <input type="date" name="startDate" value="${escapeHtml(ride?.start_date ?? "")}" required>
+            <input type="date" name="startDate" value="${escapeHtml(ride?.start_date ?? "")}" required class="date-input">
           </div>
           <div id="endDateField">
             <label>End Date</label>
-            <input type="date" name="endDate" value="${escapeHtml(ride?.end_date ?? "")}">
+            <input type="date" name="endDate" value="${escapeHtml(ride?.end_date ?? "")}" class="date-input">
           </div>
+        </div>
+        <div class="form-row single-column">
+          <div>
+            <label>Pickup Time</label>
+            <input type="time" name="startTime" value="${escapeHtml(ride?.start_time ?? "")}">
+          </div>
+        </div>
+        <div class="flexible-row">
+          <input type="checkbox" name="flexible" id="flexible" value="1" ${ride?.flexible ? "checked" : ""}>
+          <label for="flexible">Flexible on time</label>
         </div>
         <div class="form-row">
           <div>
-            <label>Origin</label>
+            <label>Departure</label>
             <input type="text" name="origin" maxlength="75" value="${escapeHtml(ride?.origin ?? "")}" required>
           </div>
           <div>
@@ -402,10 +423,27 @@ function initRideFormControls() {
     });
   }
 
-  rideType.addEventListener("change", updateOfferFields);
-  tripType.addEventListener("change", updateEndDateField);
+document.querySelectorAll(".ride-type-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      document.querySelectorAll(".ride-type-card").forEach((c) => c.classList.remove("active"));
+      card.classList.add("active");
+      rideType.value = card.dataset.type;
+      updateOfferFields();
+    });
+  });  tripType.addEventListener("change", updateEndDateField);
   updateEndDateField();
   updateOfferFields();
+
+  // Date input: auto-format as user types (YYYY-MM-DD)
+  document.querySelectorAll(".date-input").forEach((input) => {
+    input.addEventListener("input", (e) => {
+      let val = e.target.value.replace(/[^\d]/g, "");
+      if (val.length > 4) val = val.slice(0, 4) + "-" + val.slice(4);
+      if (val.length > 7) val = val.slice(0, 7) + "-" + val.slice(7);
+      if (val.length > 10) val = val.slice(0, 10);
+      e.target.value = val;
+    });
+  });
 }
 
 function bindFormEvents() {
@@ -428,6 +466,9 @@ function bindFormEvents() {
       seats: formData.get("seats"),
       rideCost: formData.get("rideCost"),
       genderPreference: formData.get("genderPreference"),
+      flexible: formData.get("flexible") === "1",
+      startTime: formData.get("startTime"),
+      endTime: formData.get("endTime"),
     };
 
     try {
