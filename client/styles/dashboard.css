@@ -416,6 +416,27 @@ body.donation-body {
     color: #0f172a;
 }
 
+.ride-filter-controls {
+    display: grid;
+    gap: 12px;
+}
+
+.ride-filter-toggle {
+    align-items: center;
+    color: #334155;
+    cursor: pointer;
+    display: flex;
+    font-size: 13px;
+    font-weight: 700;
+    gap: 8px;
+}
+
+.ride-filter-toggle input {
+    accent-color: #2563eb;
+    height: 16px;
+    width: 16px;
+}
+
 .ride-search-form {
     display: grid;
     gap: 7px;

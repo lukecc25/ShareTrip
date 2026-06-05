@@ -9,6 +9,7 @@ const PUBLIC_FIELDS = [
   "email",
   "phone",
   "gender",
+  "able_driver",
   "created_at",
   "updated_at",
 ];
@@ -88,6 +89,12 @@ async function updateAccount(id, data) {
       email: data.email.trim().toLowerCase(),
       phone: data.phone ?? null,
       gender: data.gender,
+      able_driver:
+        data.able_driver !== undefined
+          ? data.able_driver
+            ? 1
+            : 0
+          : (current.able_driver ?? 1),
       updated_at: now(),
     };
     return pickPublic(store.accounts[index]);
