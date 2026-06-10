@@ -118,6 +118,17 @@ function renderRideCard(ride) {
   const splitCost = ride.split_cost;
   const commentCount = ride.comment_count;
 
+  // --- NEW: Handle Driver Name Discovery ---
+  let driverNameDisplay = "";
+  if (isOffer) {
+    // If it's an Offer, the creator/owner is the driver
+    driverNameDisplay = ride.driver_name || ride.owner_name || (isOwner ? "You" : "Community Driver");
+  } else {
+    // If it's a Request, check if a driver has been assigned yet
+    driverNameDisplay = ride.assigned_driver_name || (ride.has_assigned_driver ? "Assigned Driver" : "No driver assigned yet");
+  }
+  // -----------------------------------------
+
   let footer = `<a href="/ride-details.html?ride=${ride.id}" class="details-link">Details${
     commentCount > 0 ? ` (${commentCount})` : ""
   }</a>`;
@@ -175,6 +186,11 @@ function renderRideCard(ride) {
         </div>
         ${priceBlock}
       </div>
+      
+      <div class="ride-driver-info" style="margin-bottom: 8px; font-size: 0.9rem; color: #4a5568;">
+        <span>Driver:</span> <strong style="color: #2d3748;">${escapeHtml(driverNameDisplay)}</strong>
+      </div>
+
       <h2 class="route-title">
         <span>${escapeHtml(ride.origin)}</span>
         <span class="route-icon" aria-hidden="true">${routeIconSvg(ride.roundtrip)}</span>
