@@ -118,16 +118,34 @@ function renderRideCard(ride) {
   const splitCost = ride.split_cost;
   const commentCount = ride.comment_count;
 
-  // --- NEW: Handle Driver Name Discovery ---
+  // --- Dynamic Actual Name Resolution ---
   let driverNameDisplay = "";
+  
   if (isOffer) {
-    // If it's an Offer, the creator/owner is the driver
-    driverNameDisplay = ride.driver_name || ride.owner_name || (isOwner ? "You" : "Community Driver");
+    if (isOwner) {
+      driverNameDisplay = "You";
+    } else {
+      // Check common API naming patterns for the driver's actual name
+      const firstName = ride.driver_fname || ride.owner_fname || ride.user?.fname || "";
+      const lastName = ride.driver_lname || ride.owner_lname || ride.user?.lname || "";
+      const fullName = `${firstName} ${lastName}`.trim();
+
+      // Fallback to a single name field if names are not split into first/last properties
+      driverNameDisplay = fullName || ride.driver_name || ride.owner_name || "Unknown Member";
+    }
   } else {
-    // If it's a Request, check if a driver has been assigned yet
-    driverNameDisplay = ride.assigned_driver_name || (ride.has_assigned_driver ? "Assigned Driver" : "No driver assigned yet");
+    // If it's a Request, handle the assigned driver's actual name
+    if (ride.has_assigned_driver) {
+      const assignedFirstName = ride.assigned_driver_fname || ride.assigned_driver?.fname || "";
+      const assignedLastName = ride.assigned_driver_lname || ride.assigned_driver?.lname || "";
+      const assignedFullName = `${assignedFirstName} ${assignedLastName}`.trim();
+      
+      driverNameDisplay = assignedFullName || ride.assigned_driver_name || "Assigned Driver";
+    } else {
+      driverNameDisplay = "No driver assigned yet";
+    }
   }
-  // -----------------------------------------
+  // ---------------------------------------
 
   let footer = `<a href="/ride-details.html?ride=${ride.id}" class="details-link">Details${
     commentCount > 0 ? ` (${commentCount})` : ""
@@ -187,7 +205,7 @@ function renderRideCard(ride) {
         ${priceBlock}
       </div>
       
-      <div class="ride-driver-info" style="margin-bottom: 8px; font-size: 0.9rem; color: #4a5568;">
+      <div class="ride-driver-info" style="margin-bottom: 10px; font-size: 0.9rem; color: #4a5568;">
         <span>Driver:</span> <strong style="color: #2d3748;">${escapeHtml(driverNameDisplay)}</strong>
       </div>
 
