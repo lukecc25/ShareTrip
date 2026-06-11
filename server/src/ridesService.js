@@ -187,8 +187,6 @@ async function saveRide(ownerId, payload) {
   const endDate = roundtrip ? payload.endDate : startDate;
   const seats = isOffer ? Math.max(1, Number(payload.seats) || 1) : 1;
   const rideCost = isOffer ? Math.max(0, Number(payload.rideCost) || 0) : 0;
-  const flexible = payload.flexible === true || payload.flexible === "true" || payload.flexible === 1;
-  const startTime = payload.startTime || null;
   const genderPreference = isOffer
     ? normalizeGenderPreference(payload.genderPreference)
     : "No preference";
@@ -214,8 +212,6 @@ async function saveRide(ownerId, payload) {
         destination: payload.destination,
         ride_cost: rideCost,
         gender_preference: genderPreference,
-        flexible,
-        start_time: startTime,
         updated_at: timestamp,
       };
       return payload.rideId;
@@ -234,9 +230,6 @@ async function saveRide(ownerId, payload) {
       destination: payload.destination,
       ride_cost: rideCost,
       gender_preference: genderPreference,
-      flexible,
-      start_time: startTime,
-      end_time: endTime,
       assigned_driver_id: null,
       created_at: timestamp,
       updated_at: timestamp,
@@ -342,7 +335,7 @@ async function cancelRide(rideId, ownerId) {
   });
 }
 
-function listCommentsFromStore(store, rideId) {
+function listCommentsFromStore(store, rideId, currentUserId) {
   return store.comments
     .filter((c) => Number(c.ride_id) === Number(rideId))
     .sort((a, b) => {
@@ -355,13 +348,14 @@ function listCommentsFromStore(store, rideId) {
         ...c,
         fname: account?.fname ?? "",
         lname: account?.lname ?? "",
+        is_own: currentUserId && c.user_id === currentUserId ? 1 : 0,
       };
     });
 }
 
 async function listComments(rideId) {
   const store = await readStore();
-  return listCommentsFromStore(store, rideId);
+  return listCommentsFromStore(store, rideId, null);
 }
 
 async function addComment(rideId, userId, body) {
@@ -381,6 +375,68 @@ async function addComment(rideId, userId, body) {
       body: text,
       created_at: now(),
     });
+  });
+}
+
+async function deleteComment(rideId, commentId, userId) {
+  await mutate((store) => {
+    const comment = store.comments.find(
+      (c) =>
+        Number(c.id) === Number(commentId) &&
+        Number(c.ride_id) === Number(rideId)
+    );
+    if (!comment) {
+      throw new Error("Comment not found.");
+    }
+    if (comment.user_id !== userId) {
+      throw new Error("You can only delete your own comments.");
+    }
+    store.comments = store.comments.filter(
+      (c) => Number(c.id) !== Number(commentId)
+    );
+  });
+}
+
+async function updateComment(rideId, commentId, userId, body) {
+  const text = body.trim().slice(0, 500);
+  if (!text) {
+    throw new Error("Please enter a comment before saving.");
+  }
+
+  await mutate((store) => {
+    const index = store.comments.findIndex(
+      (c) =>
+        Number(c.id) === Number(commentId) &&
+        Number(c.ride_id) === Number(rideId)
+    );
+    if (index < 0) {
+      throw new Error("Comment not found.");
+    }
+    if (store.comments[index].user_id !== userId) {
+      throw new Error("You can only edit your own comments.");
+    }
+    store.comments[index] = {
+      ...store.comments[index],
+      body: text,
+      updated_at: now(),
+    };
+  });
+}
+
+async function deleteRating(rideId, ratedUserId, raterUserId) {
+  await mutate((store) => {
+    const before = store.ratings.length;
+    store.ratings = store.ratings.filter(
+      (r) =>
+        !(
+          Number(r.ride_id) === Number(rideId) &&
+          r.rated_user_id === ratedUserId &&
+          r.rater_user_id === raterUserId
+        )
+    );
+    if (store.ratings.length === before) {
+      throw new Error("Rating not found.");
+    }
   });
 }
 
@@ -503,7 +559,7 @@ async function getRideDetail(rideId, currentUserId) {
         };
       });
 
-    const comments = listCommentsFromStore(store, rideId);
+    const comments = listCommentsFromStore(store, rideId, currentUserId);
     const rideCompleted = ride.end_date < today();
 
     const people = [];
@@ -810,6 +866,9 @@ module.exports = {
   leaveRide,
   cancelRide,
   addComment,
+  deleteComment,
+  updateComment,
+  deleteRating,
   ratePerson,
   listPendingDriverOffers,
   listNotifications,

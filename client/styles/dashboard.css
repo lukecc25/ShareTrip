@@ -1175,3 +1175,56 @@ body.dashboard-compose-mode #create-ride-link {
   font-size: 12px;
   margin-top: 6px;
 }
+
+/* comment, edit, delete buttons */
+.comment-own-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  justify-content: flex-end;
+}
+
+.comment-own-actions .secondary-button,
+.comment-own-actions .danger-button {
+  font-size: 12px;
+  padding: 5px 9px;
+}
+
+/* comment edit */
+.comment-item.editing {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.comment-edit-form {
+  display: grid;
+  gap: 8px;
+}
+
+.comment-edit-form textarea {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font: inherit;
+  min-height: 58px;
+  padding: 9px 10px;
+  resize: vertical;
+  width: 100%;
+}
+
+.comment-edit-form textarea:focus {
+  outline: 2px solid rgba(37, 99, 235, 0.2);
+  border-color: #2563eb;
+}
+
+.comment-edit-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* delete rating */
+.delete-rating-btn {
+  font-size: 12px;
+  margin-top: 4px;
+  padding: 5px 9px;
+}
