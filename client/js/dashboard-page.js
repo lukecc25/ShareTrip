@@ -18,6 +18,7 @@ let state = {
   editId: 0,
   rides: [],
   profile: null,
+  hideRequestRides: false,
   message: "",
   messageType: "success",
 };
@@ -67,6 +68,16 @@ function editingRide() {
     return null;
   }
   return state.rides.find((ride) => Number(ride.id) === state.editId) || null;
+}
+
+function visibleRides() {
+  if (state.scope === "my" || u().isAbleDriver(state.profile)) {
+    return state.rides;
+  }
+  if (!state.hideRequestRides) {
+    return state.rides;
+  }
+  return state.rides.filter((ride) => ride.ride_type !== "request");
 }
 
 function renderRequestDriverActions(ride) {
@@ -316,6 +327,18 @@ function updateStaticChrome() {
     clearSearch.hidden = true;
   }
 
+  const requestFilter = document.getElementById("hide-request-rides-filter");
+  if (requestFilter) {
+    const showFilter = state.scope === "all" && !u().isAbleDriver(state.profile);
+    requestFilter.hidden = !showFilter;
+    if (showFilter) {
+      const checkbox = requestFilter.querySelector('input[type="checkbox"]');
+      if (checkbox) {
+        checkbox.checked = state.hideRequestRides;
+      }
+    }
+  }
+
   const messageEl = document.getElementById("dashboard-message");
   if (state.message) {
     messageEl.hidden = false;
@@ -334,13 +357,25 @@ function renderRides() {
     return;
   }
 
-  if (state.rides.length > 0) {
-    container.innerHTML = `<section class="ride-grid">${state.rides.map(renderRideCard).join("")}</section>`;
+  const rides = visibleRides();
+
+  if (rides.length > 0) {
+    container.innerHTML = `<section class="ride-grid">${rides.map(renderRideCard).join("")}</section>`;
   } else {
+    const filteredOut =
+      state.rides.length > 0 &&
+      state.scope === "all" &&
+      !u().isAbleDriver(state.profile) &&
+      state.hideRequestRides;
+
     container.innerHTML = `
       <section class="empty-rides">
         <h2>No rides found</h2>
-        <p>Try changing the ride view or search terms.</p>
+        <p>${
+          filteredOut
+            ? "Driver requests are hidden. Turn off the filter above to see them."
+            : "Try changing the ride view or search terms."
+        }</p>
       </section>`;
   }
 
@@ -504,6 +539,25 @@ function bindFormEvents() {
   });
 }
 
+function bindRequestRideFilter() {
+  const requestFilter = document.getElementById("hide-request-rides-filter");
+  if (!requestFilter) {
+    return;
+  }
+
+  const checkbox = requestFilter.querySelector('input[type="checkbox"]');
+  if (!checkbox) {
+    return;
+  }
+
+  checkbox.addEventListener("change", () => {
+    state.hideRequestRides = checkbox.checked;
+    u().saveHideRequestRidesPreference(state.hideRequestRides);
+    renderRides();
+    updateStaticChrome();
+  });
+}
+
 function bindSearchForm() {
   const searchForm = document.getElementById("searchForm");
   if (!searchForm || searchForm.dataset.bound === "true") {
@@ -594,6 +648,7 @@ async function initDashboardPage() {
 
   parseInitialState();
   bindSearchForm();
+  bindRequestRideFilter();
 
   const profile = await ShareTripAuth.requireProfile();
   if (!profile) {
@@ -601,6 +656,7 @@ async function initDashboardPage() {
   }
 
   state.profile = profile;
+  state.hideRequestRides = u().loadHideRequestRidesPreference(profile);
   await ShareTripNavbar.renderNavbar("dashboard");
 
   if (state.editId) {
