@@ -130,6 +130,7 @@ app.use(express.static(clientRoot));
 
 app.listen(port, () => {
   console.log(`ShareTrip server running on port ${port}`);
+  console.log(`Live site: http://localhost:${port}`);
   console.log(`Serving client from ${clientRoot}`);
   console.log(`Supabase URL: ${process.env.SUPABASE_URL || "(not set)"}`);
 });
