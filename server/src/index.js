@@ -48,5 +48,5 @@ app.use(express.static(clientRoot));
 
 app.listen(port, () => {
   console.log(`ShareTrip server running at http://localhost:${port}`);
-  console.log(`Local data: ${path.join(dataDir, "local-store.json")}`);
+  console.log(`Supabase URL: ${process.env.SUPABASE_URL || "(not set)"}`);
 });

@@ -28,7 +28,7 @@ async function requireProfile(redirectTo = "/sign-in.html") {
     }
     return data.profile;
   } catch (error) {
-    if (error.status === 401) {
+    if (error.status === 401 || error.status === 404) {
       window.location.href = "/sign-in.html";
       return false;
     }

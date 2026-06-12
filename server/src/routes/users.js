@@ -22,7 +22,10 @@ router.get("/me/profile", requireApiAuth, async (req, res) => {
   try {
     const profile = await authService.getAccountById(req.userId);
     if (!profile) {
-      res.status(404).json({ error: "Account not found." });
+      req.session.destroy(() => {
+        res.clearCookie("connect.sid");
+        res.status(401).json({ error: "Session expired. Please sign in again." });
+      });
       return;
     }
     res.json({ profile });
