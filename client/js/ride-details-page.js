@@ -88,6 +88,20 @@ function renderDriverOffersPanel(detail) {
     </section>`;
 }
 
+function profilePageUrl(userId) {
+  if (!userId) {
+    return "";
+  }
+  return `/my-profile.html?user=${encodeURIComponent(userId)}`;
+}
+
+function renderViewProfileLink(userId) {
+  if (!userId) {
+    return "";
+  }
+  return `<a href="${profilePageUrl(userId)}" class="view-profile-link secondary-button">View profile</a>`;
+}
+
 function renderPersonCard(person, ride, role) {
   const { escapeHtml, formatRatingValue, fullName } = u();
   const isDriver = role === "driver";
@@ -129,6 +143,9 @@ function renderPersonCard(person, ride, role) {
         <span>${escapeHtml(drivenCount)} driven</span>
         <span>${escapeHtml(passengerTrips)} passenger</span>
         <span>${escapeHtml(ratingCount)} rating${ratingCount == 1 ? "" : "s"}</span>
+      </div>
+      <div class="person-actions">
+        ${renderViewProfileLink(userId)}
       </div>
       ${
         canRate
@@ -215,20 +232,10 @@ function render() {
   const splitCost = ride.split_cost;
   const passengerCount = ride.passenger_count ?? detail.people.length;
 
-  // --- FIX APPLIED HERE ---
   const rawFirstName = ride.driver_fname || ride.owner_fname || ride.fname || "";
   const rawLastName = ride.driver_lname || ride.owner_lname || ride.lname || "";
   const resolvedFullName = `${rawFirstName} ${rawLastName}`.trim();
-
   const driverName = isOwner ? "You" : (resolvedFullName || ride.driver_name || ride.owner_name || "Unknown Driver");
-
-  const driver = {
-    fname: rawFirstName || (isOwner ? "You" : driverName.split(" ")[0]),
-    lname: rawLastName || (isOwner ? "" : driverName.split(" ").slice(1).join(" ")),
-    gender: ride.driver_gender,
-    user_id: ride.owner_id,
-  };
-  // ------------------------
 
   let actions = "";
   if (isOffer) {
@@ -247,7 +254,7 @@ function render() {
 
   const assignedDriverHtml =
     !isOffer && detail.assigned_driver
-      ? `<div><span>Assigned driver</span><strong>${escapeHtml(fullName(detail.assigned_driver))}</strong></div>`
+      ? `<div class="assigned-driver-row"><span>Assigned driver</span><div><strong>${escapeHtml(fullName(detail.assigned_driver))}</strong>${renderViewProfileLink(detail.assigned_driver.id)}</div></div>`
       : "";
 
   const commentsHtml =
@@ -278,7 +285,7 @@ function render() {
           <span>${escapeHtml(ride.destination)}</span>
         </h1>
         <div class="detail-summary-grid">
-          <div><span>Posted by</span><strong>${escapeHtml(driverName)}</strong></div>
+          <div class="posted-by-row"><span>Posted by</span><div><strong>${escapeHtml(driverName)}</strong>${!isOwner ? renderViewProfileLink(ride.owner_id) : ""}</div></div>
           <div><span>Start</span><strong>${escapeHtml(formatDateValue(ride.start_date))}</strong></div>
           <div><span>End</span><strong>${escapeHtml(formatDateValue(ride.end_date))}</strong></div>
           <div><span>Trip</span><strong>${ride.roundtrip ? "Round trip" : "One way"}</strong></div>
@@ -298,12 +305,15 @@ function render() {
         isOffer
           ? `<section class="detail-card detail-section" id="people">
               <div class="section-heading">
-                <h2>People Involved</h2>
+                <h2>Passengers</h2>
                 <span>${passengerCount} passenger${passengerCount === 1 ? "" : "s"}</span>
               </div>
               <div class="people-list">
-                ${renderPersonCard(driver, ride, "driver")}
-                ${detail.people.map((person) => renderPersonCard(person, ride, "passenger")).join("")}
+                ${
+                  detail.people.length
+                    ? detail.people.map((person) => renderPersonCard(person, ride, "passenger")).join("")
+                    : '<p class="no-comments">No passengers yet.</p>'
+                }
               </div>
             </section>`
           : ""

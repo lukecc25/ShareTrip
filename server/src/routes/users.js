@@ -74,4 +74,17 @@ router.put("/me/profile", requireApiAuth, async (req, res) => {
   }
 });
 
+router.get("/:userId/overview", requireApiAuth, async (req, res) => {
+  try {
+    const overview = await ridesService.getUserProfileOverview(req.params.userId);
+    if (!overview) {
+      res.status(404).json({ error: "Account not found." });
+      return;
+    }
+    res.json(overview);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

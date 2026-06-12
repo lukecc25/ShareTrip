@@ -73,6 +73,7 @@ function routeIconSvg(roundtrip) {
 }
 
 const HIDE_REQUEST_RIDES_KEY = "sharetrip-hide-request-rides";
+const SAME_GENDER_ONLY_FILTER_KEY = "sharetrip-same-gender-only-filter";
 
 function ableDriverClass(isAble) {
   return isAble ? "able-driver" : "not-able-driver";
@@ -83,18 +84,33 @@ function isAbleDriver(profile) {
 }
 
 function loadHideRequestRidesPreference(profile) {
-  if (isAbleDriver(profile)) {
-    return false;
+  if (!isAbleDriver(profile)) {
+    saveHideRequestRidesPreference(true);
+    return true;
   }
   const stored = localStorage.getItem(HIDE_REQUEST_RIDES_KEY);
   if (stored === null) {
-    return true;
+    return false;
   }
   return stored === "1";
 }
 
+function applyHideRequestRidesForDriverStatus(profile) {
+  if (!isAbleDriver(profile)) {
+    saveHideRequestRidesPreference(true);
+  }
+}
+
 function saveHideRequestRidesPreference(hide) {
   localStorage.setItem(HIDE_REQUEST_RIDES_KEY, hide ? "1" : "0");
+}
+
+function loadSameGenderOnlyPreference() {
+  return localStorage.getItem(SAME_GENDER_ONLY_FILTER_KEY) === "1";
+}
+
+function saveSameGenderOnlyPreference(enabled) {
+  localStorage.setItem(SAME_GENDER_ONLY_FILTER_KEY, enabled ? "1" : "0");
 }
 
 function readQuery() {
@@ -124,6 +140,9 @@ window.ShareTripUtils = {
   isAbleDriver,
   loadHideRequestRidesPreference,
   saveHideRequestRidesPreference,
+  applyHideRequestRidesForDriverStatus,
+  loadSameGenderOnlyPreference,
+  saveSameGenderOnlyPreference,
   readQuery,
   setQuery,
 };

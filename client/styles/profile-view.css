@@ -203,10 +203,34 @@
     min-width: 0;
 }
 
-.profile-hero-info h1 {
+.profile-hero-info h1.profile-name {
     color: #0f172a;
     font-size: 34px;
+    font-weight: 700;
+    line-height: 1.1;
     margin-bottom: 8px;
+}
+
+.profile-eyebrow-row {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.profile-eyebrow-row .eyebrow {
+    margin-bottom: 0;
+}
+
+.profile-gender {
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.2;
+    padding: 4px 10px;
 }
 
 .profile-rating-summary {
@@ -276,6 +300,20 @@
 
 .profile-edit-toggle {
     margin-bottom: 16px;
+}
+
+.profile-edit-form label.able-driver-toggle {
+    align-items: center;
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.profile-edit-form label.able-driver-toggle input[type="checkbox"] {
+    flex-shrink: 0;
+    margin: 0;
+    width: auto;
 }
 
 .profile-hero-actions {
@@ -476,6 +514,10 @@
     }
 
     .profile-rating-summary {
+        justify-content: center;
+    }
+
+    .profile-eyebrow-row {
         justify-content: center;
     }
 }
