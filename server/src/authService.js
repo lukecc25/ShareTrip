@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const { randomUUID } = require("crypto");
-const { readStore, mutate, now } = require("./localStore");
+const { getSupabase } = require("./supabase");
+const { now, throwIfError, normalizeAccount } = require("./dbUtils");
 
 const PUBLIC_FIELDS = [
   "id",
@@ -10,9 +11,33 @@ const PUBLIC_FIELDS = [
   "phone",
   "gender",
   "able_driver",
+  "profile_picture_url",
   "created_at",
   "updated_at",
 ];
+
+const MAX_PROFILE_PICTURE_LENGTH = 500000;
+
+function normalizeProfilePictureUrl(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  if (typeof value !== "string") {
+    throw new Error("Invalid profile picture.");
+  }
+  const allowedPrefixes = [
+    "data:image/jpeg;base64,",
+    "data:image/png;base64,",
+    "data:image/webp;base64,",
+  ];
+  if (!allowedPrefixes.some((prefix) => value.startsWith(prefix))) {
+    throw new Error("Profile picture must be a JPEG, PNG, or WebP image.");
+  }
+  if (value.length > MAX_PROFILE_PICTURE_LENGTH) {
+    throw new Error("Profile picture is too large. Use a smaller image.");
+  }
+  return value;
+}
 
 function pickPublic(account) {
   if (!account) {
@@ -20,46 +45,65 @@ function pickPublic(account) {
   }
   const row = {};
   for (const key of PUBLIC_FIELDS) {
+    if (key === "able_driver") {
+      row[key] = Boolean(account.able_driver);
+      continue;
+    }
     row[key] = account[key];
   }
   return row;
 }
 
 async function getAccountById(id) {
-  const data = await readStore();
-  return pickPublic(data.accounts.find((a) => a.id === id));
+  const data = throwIfError(
+    await getSupabase().from("accounts").select("*").eq("id", id).maybeSingle()
+  );
+  return pickPublic(normalizeAccount(data));
 }
 
 async function getAccountByEmail(email) {
   const normalized = email.trim().toLowerCase();
-  const data = await readStore();
-  return data.accounts.find((a) => a.email === normalized) || null;
+  const data = throwIfError(
+    await getSupabase()
+      .from("accounts")
+      .select("*")
+      .eq("email", normalized)
+      .maybeSingle()
+  );
+  return data ? normalizeAccount(data) : null;
 }
 
 async function createAccount({ fname, lname, email, phone, gender, password }) {
   const normalizedEmail = email.trim().toLowerCase();
   const passwordHash = await bcrypt.hash(password, 10);
+  const timestamp = now();
+  const id = randomUUID();
 
-  return mutate((store) => {
-    if (store.accounts.some((a) => a.email === normalizedEmail)) {
-      throw new Error("An account with that email already exists.");
-    }
-
-    const timestamp = now();
-    const account = {
-      id: randomUUID(),
+  const result = await getSupabase()
+    .from("accounts")
+    .insert({
+      id,
       fname,
       lname,
       email: normalizedEmail,
       phone: phone ?? null,
       gender,
+      able_driver: true,
       password_hash: passwordHash,
       created_at: timestamp,
       updated_at: timestamp,
-    };
-    store.accounts.push(account);
-    return pickPublic(account);
-  });
+    })
+    .select("*")
+    .single();
+
+  if (result.error) {
+    if (result.error.code === "23505") {
+      throw new Error("An account with that email already exists.");
+    }
+    throw new Error(result.error.message);
+  }
+
+  return pickPublic(normalizeAccount(result.data));
 }
 
 async function verifyLogin(email, password) {
@@ -75,30 +119,51 @@ async function verifyLogin(email, password) {
 }
 
 async function updateAccount(id, data) {
-  return mutate((store) => {
-    const index = store.accounts.findIndex((a) => a.id === id);
-    if (index < 0) {
-      throw new Error("Account not found.");
-    }
+  const normalizedEmail = data.email.trim().toLowerCase();
+  const conflict = throwIfError(
+    await getSupabase()
+      .from("accounts")
+      .select("id")
+      .eq("email", normalizedEmail)
+      .neq("id", id)
+      .maybeSingle()
+  );
+  if (conflict) {
+    throw new Error("An account with that email already exists.");
+  }
 
-    const current = store.accounts[index];
-    store.accounts[index] = {
-      ...current,
-      fname: data.fname,
-      lname: data.lname,
-      email: data.email.trim().toLowerCase(),
-      phone: data.phone ?? null,
-      gender: data.gender,
-      able_driver:
-        data.able_driver !== undefined
-          ? data.able_driver
-            ? 1
-            : 0
-          : (current.able_driver ?? 1),
-      updated_at: now(),
-    };
-    return pickPublic(store.accounts[index]);
-  });
+  const existing = throwIfError(
+    await getSupabase().from("accounts").select("*").eq("id", id).maybeSingle()
+  );
+  if (!existing) {
+    throw new Error("Account not found.");
+  }
+
+  const normalized = normalizeAccount(existing);
+  const payload = {
+    fname: data.fname,
+    lname: data.lname,
+    email: normalizedEmail,
+    phone: data.phone ?? null,
+    gender: data.gender,
+    able_driver:
+      data.able_driver !== undefined ? Boolean(data.able_driver) : Boolean(normalized.able_driver),
+    updated_at: now(),
+  };
+
+  if ("profile_picture_url" in data) {
+    payload.profile_picture_url = normalizeProfilePictureUrl(data.profile_picture_url);
+  }
+
+  const row = throwIfError(
+    await getSupabase()
+      .from("accounts")
+      .update(payload)
+      .eq("id", id)
+      .select("*")
+      .single()
+  );
+  return pickPublic(normalizeAccount(row));
 }
 
 module.exports = {

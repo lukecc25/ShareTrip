@@ -2,7 +2,7 @@
   "name": "sharetrip-server",
   "version": "1.0.0",
   "private": true,
-  "description": "ShareTrip API (local JSON storage)",
+  "description": "ShareTrip API (Supabase)",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

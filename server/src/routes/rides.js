@@ -168,6 +168,35 @@ router.post("/:id/comments", requireApiAuth, async (req, res) => {
   }
 });
 
+// delete comments
+router.delete("/:id/comments/:commentId", requireApiAuth, async (req, res) => {
+  try {
+    await ridesService.deleteComment(
+      req.params.id,
+      req.params.commentId,
+      req.userId
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// edit comments
+router.put("/:id/comments/:commentId", requireApiAuth, async (req, res) => {
+  try {
+    await ridesService.updateComment(
+      req.params.id,
+      req.params.commentId,
+      req.userId,
+      req.body.commentBody || ""
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 router.post("/:id/ratings", requireApiAuth, async (req, res) => {
   try {
     await ridesService.ratePerson(
@@ -177,6 +206,20 @@ router.post("/:id/ratings", requireApiAuth, async (req, res) => {
       Number(req.body.rating),
       req.body.ratingComment || "",
       req.body.role
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// delete rating
+router.delete("/:id/ratings/:ratedUserId", requireApiAuth, async (req, res) => {
+  try {
+    await ridesService.deleteRating(
+      req.params.id,
+      req.params.ratedUserId,
+      req.userId
     );
     res.json({ ok: true });
   } catch (err) {

@@ -1271,3 +1271,191 @@ body.donation-body {
         font-size: 24px;
     }
 }
+
+/* Ride card: colored top & bottom border by type */
+.ride-card--offer {
+  border-top: 3px solid #16a34a;
+  border-bottom: 3px solid #16a34a;
+}
+
+.ride-card--request {
+  border-top: 3px solid #2563eb;
+  border-bottom: 3px solid #2563eb;
+}
+
+/* Date input: manual typing style */
+.ride-form input.date-input {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+}
+
+.flexible-badge {
+  background: #f3e8ff;
+  border-radius: 999px;
+  color: #7e22ce;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 9px;
+}
+
+.flexible-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.flexible-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #2563eb;
+}
+
+.flexible-row label {
+  color: #334155;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  margin: 0;
+}
+
+.ride-type-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.ride-type-selector {
+  margin-bottom: 4px;
+}
+
+.ride-type-selector-label {
+  color: #334155;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.ride-type-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  background: #ffffff !important;
+  color: inherit !important;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ride-type-card strong {
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.ride-type-card:hover {
+  border: 1.5px solid #94a3b8 !important;
+  background: #f8fafc !important;
+}
+
+.ride-type-card.active {
+  background: #f1f5f9 !important;
+  border: 2px solid #0f172a !important;
+}
+
+.ride-type-card.active strong {
+  color: #0f172a;
+}
+
+.input-with-prefix {
+  display: flex;
+  align-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.input-with-prefix:focus-within {
+  outline: 2px solid rgba(37, 99, 235, 0.2);
+  border-color: #2563eb;
+}
+
+.input-prefix {
+  background: #f1f5f9;
+  border-right: 1px solid #cbd5e1;
+  color: #475569;
+  font-weight: 700;
+  padding: 12px 10px;
+}
+
+.input-with-prefix input {
+  border: none !important;
+  outline: none !important;
+  flex: 1;
+}
+
+.field-hint {
+  color: #64748b;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+/* comment, edit, delete buttons */
+.comment-own-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  justify-content: flex-end;
+}
+
+.comment-own-actions .secondary-button,
+.comment-own-actions .danger-button {
+  font-size: 12px;
+  padding: 5px 9px;
+}
+
+/* comment edit */
+.comment-item.editing {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.comment-edit-form {
+  display: grid;
+  gap: 8px;
+}
+
+.comment-edit-form textarea {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font: inherit;
+  min-height: 58px;
+  padding: 9px 10px;
+  resize: vertical;
+  width: 100%;
+}
+
+.comment-edit-form textarea:focus {
+  outline: 2px solid rgba(37, 99, 235, 0.2);
+  border-color: #2563eb;
+}
+
+.comment-edit-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* delete rating */
+.delete-rating-btn {
+  font-size: 12px;
+  margin-top: 4px;
+  padding: 5px 9px;
+}

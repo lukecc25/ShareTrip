@@ -33,6 +33,11 @@ function renderRatingForm(rideId, person, role) {
         <button type="submit">Save</button>
       </div>
     </form>
+    ${
+      currentRating
+        ? `<button type="button" class="delete-rating-btn secondary-button" data-action="delete-rating" data-ride-id="${rideId}" data-rated-user-id="${escapeHtml(userId)}">Remove rating</button>`
+        : ""
+    }
   `;
 }
 
@@ -148,6 +153,42 @@ function renderPersonCard(person, ride, role) {
   `;
 }
 
+function renderComment(comment, rideId) {
+  const { escapeHtml, formatCommentDate, fullName } = u();
+  const isOwn = comment.is_own === 1;
+
+  return `
+    <article class="comment-item" id="comment-${comment.id}">
+      <div class="comment-meta">
+        <strong>${escapeHtml(fullName(comment))}</strong>
+        <span>${escapeHtml(formatCommentDate(comment.created_at))}${comment.updated_at ? " (edited)" : ""}</span>
+      </div>
+      <p class="comment-body">${escapeHtml(comment.body).replace(/\n/g, "<br>")}</p>
+      ${
+        isOwn
+          ? `<div class="comment-own-actions">
+              <button type="button" class="secondary-button" data-action="edit-comment" data-comment-id="${comment.id}" data-ride-id="${rideId}">Edit</button>
+              <button type="button" class="danger-button" data-action="delete-comment" data-comment-id="${comment.id}" data-ride-id="${rideId}">Delete</button>
+            </div>`
+          : ""
+      }
+    </article>`;
+}
+
+function renderEditCommentForm(comment, rideId) {
+  const { escapeHtml } = u();
+  return `
+    <article class="comment-item editing" id="comment-${comment.id}">
+      <form class="comment-edit-form" data-comment-id="${comment.id}" data-ride-id="${rideId}">
+        <textarea name="commentBody" maxlength="500" rows="3" required>${escapeHtml(comment.body)}</textarea>
+        <div class="comment-edit-actions">
+          <button type="submit" class="primary-small-button">Save</button>
+          <button type="button" class="secondary-button" data-action="cancel-edit-comment" data-comment-id="${comment.id}" data-ride-id="${rideId}">Cancel</button>
+        </div>
+      </form>
+    </article>`;
+}
+
 function render() {
   const root = document.getElementById("ride-detail-root");
   if (!root || !detail) {
@@ -211,18 +252,7 @@ function render() {
 
   const commentsHtml =
     detail.comments.length > 0
-      ? detail.comments
-          .map(
-            (comment) => `
-        <article class="comment-item">
-          <div class="comment-meta">
-            <strong>${escapeHtml(fullName(comment))}</strong>
-            <span>${escapeHtml(formatCommentDate(comment.created_at))}</span>
-          </div>
-          <p>${escapeHtml(comment.body).replace(/\n/g, "<br>")}</p>
-        </article>`
-          )
-          .join("")
+      ? detail.comments.map((c) => renderComment(c, ride.id)).join("")
       : '<p class="no-comments">No comments yet.</p>';
 
   root.innerHTML = `
@@ -280,7 +310,7 @@ function render() {
       }
       <section class="detail-card detail-section ride-comments" id="comments">
         <div class="section-heading"><h2>Comments</h2><span>${detail.comments.length}</span></div>
-        <div class="comment-list">${commentsHtml}</div>
+        <div class="comment-list" id="comment-list">${commentsHtml}</div>
         <form class="comment-form" id="commentForm">
           <label for="commentBody">Add a comment</label>
           <textarea id="commentBody" name="commentBody" maxlength="500" rows="3" required></textarea>
@@ -299,6 +329,7 @@ function bindEvents(rideId) {
       const action = button.dataset.action;
       const offerId = button.dataset.offerId;
       const targetRideId = button.dataset.rideId || rideId;
+      const commentId = button.dataset.commentId;
 
       try {
         if (action === "become-driver") {
@@ -329,7 +360,56 @@ function bindEvents(rideId) {
             method: "POST",
           });
           window.location.reload();
+          return;
         }
+
+        if (action === "delete-comment") {
+          if (!window.confirm("Do you want to delete this comment?")) return;
+          await ShareTripApi.apiFetch(
+            `/api/rides/${targetRideId}/comments/${commentId}`,
+            { method: "DELETE" }
+          );
+          const el = document.getElementById(`comment-${commentId}`);
+          if (el) el.remove();
+
+          const badge = document.querySelector(".ride-comments .section-heading span");
+          if (badge) {
+            const count = document.querySelectorAll(".comment-list .comment-item").length;
+            badge.textContent = String(count);
+          }
+          return;
+        }
+
+        if (action === "edit-comment") {
+          const commentEl = document.getElementById(`comment-${commentId}`);
+          if (!commentEl) return;
+          const commentData = detail.comments.find((c) => Number(c.id) === Number(commentId));
+          if (!commentData) return;
+          commentEl.outerHTML = renderEditCommentForm(commentData, targetRideId);
+          bindCommentEditForm();
+          return;
+        }
+
+        if (action === "cancel-edit-comment") {
+          const commentData = detail.comments.find((c) => Number(c.id) === Number(commentId));
+          if (!commentData) return;
+          const editEl = document.getElementById(`comment-${commentId}`);
+          if (editEl) editEl.outerHTML = renderComment(commentData, targetRideId);
+          bindEvents(rideId);
+          return;
+        }
+
+        if (action === "delete-rating") {
+          if (!window.confirm("Do you want to delete this rating?")) return;
+          const ratedUserId = button.dataset.ratedUserId;
+          await ShareTripApi.apiFetch(
+            `/api/rides/${targetRideId}/ratings/${ratedUserId}`,
+            { method: "DELETE" }
+          );
+          window.location.href = `/ride-details.html?ride=${targetRideId}#people`;
+          return;
+        }
+
       } catch (error) {
         message = error.message;
         messageType = "error";
@@ -369,6 +449,50 @@ function bindEvents(rideId) {
           }),
         });
         window.location.href = `/ride-details.html?ride=${rideId}#people`;
+      } catch (error) {
+        message = error.message;
+        messageType = "error";
+        render();
+      }
+    });
+  });
+
+  bindCommentEditForm();
+}
+
+function bindCommentEditForm() {
+  document.querySelectorAll(".comment-edit-form").forEach((form) => {
+    if (form.dataset.bound === "true") return;
+    form.dataset.bound = "true";
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const commentId = form.dataset.commentId;
+      const rideId = form.dataset.rideId;
+      const formData = new FormData(form);
+      const newBody = formData.get("commentBody");
+
+      try {
+        await ShareTripApi.apiFetch(
+          `/api/rides/${rideId}/comments/${commentId}`,
+          {
+            method: "PUT",
+            body: JSON.stringify({ commentBody: newBody }),
+          }
+        );
+        const idx = detail.comments.findIndex((c) => Number(c.id) === Number(commentId));
+        if (idx >= 0) {
+          detail.comments[idx] = {
+            ...detail.comments[idx],
+            body: newBody,
+            updated_at: new Date().toISOString(),
+          };
+        }
+        const editEl = document.getElementById(`comment-${commentId}`);
+        if (editEl) {
+          editEl.outerHTML = renderComment(detail.comments[idx] || { id: commentId, body: newBody }, rideId);
+        }
+        bindEvents(Number(rideId));
       } catch (error) {
         message = error.message;
         messageType = "error";
