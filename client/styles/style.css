@@ -75,6 +75,44 @@ body {
     text-decoration: none;
 }
 
+.nav-profile-link {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    line-height: 1;
+    min-width: 72px;
+}
+
+.nav-profile-avatar {
+    align-items: center;
+    background: #dbeafe;
+    border: 1px solid #bfdbfe;
+    border-radius: 50%;
+    color: #2563eb;
+    display: flex;
+    flex-shrink: 0;
+    font-size: 14px;
+    font-weight: 800;
+    height: 44px;
+    justify-content: center;
+    overflow: hidden;
+    text-transform: uppercase;
+    width: 44px;
+}
+
+.nav-profile-avatar img {
+    display: block;
+    height: 100%;
+    object-fit: cover;
+    width: 100%;
+}
+
+.nav-profile-link.active .nav-profile-avatar {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
 .nav-link:hover {
     color: #2563eb;
 }
@@ -160,6 +198,15 @@ body {
 
     .nav-link {
         font-size: 14px;
+    }
+
+    .nav-profile-link {
+        min-width: 60px;
+    }
+
+    .nav-profile-avatar {
+        height: 38px;
+        width: 38px;
     }
 
     .hero h1 {

@@ -11,9 +11,33 @@ const PUBLIC_FIELDS = [
   "phone",
   "gender",
   "able_driver",
+  "profile_picture_url",
   "created_at",
   "updated_at",
 ];
+
+const MAX_PROFILE_PICTURE_LENGTH = 500000;
+
+function normalizeProfilePictureUrl(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  if (typeof value !== "string") {
+    throw new Error("Invalid profile picture.");
+  }
+  const allowedPrefixes = [
+    "data:image/jpeg;base64,",
+    "data:image/png;base64,",
+    "data:image/webp;base64,",
+  ];
+  if (!allowedPrefixes.some((prefix) => value.startsWith(prefix))) {
+    throw new Error("Profile picture must be a JPEG, PNG, or WebP image.");
+  }
+  if (value.length > MAX_PROFILE_PICTURE_LENGTH) {
+    throw new Error("Profile picture is too large. Use a smaller image.");
+  }
+  return value;
+}
 
 function pickPublic(account) {
   if (!account) {
@@ -126,6 +150,10 @@ async function updateAccount(id, data) {
       data.able_driver !== undefined ? Boolean(data.able_driver) : Boolean(normalized.able_driver),
     updated_at: now(),
   };
+
+  if ("profile_picture_url" in data) {
+    payload.profile_picture_url = normalizeProfilePictureUrl(data.profile_picture_url);
+  }
 
   const row = throwIfError(
     await getSupabase()

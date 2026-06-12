@@ -28,7 +28,166 @@
     height: 112px;
     justify-content: center;
     letter-spacing: 0.02em;
+    overflow: hidden;
     width: 112px;
+}
+
+.profile-avatar img {
+    display: block;
+    height: 100%;
+    object-fit: cover;
+    width: 100%;
+}
+
+.profile-avatar.has-photo {
+    background: #e2e8f0;
+}
+
+.profile-avatar-wrap {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    gap: 10px;
+    width: 112px;
+}
+
+.profile-photo-upload {
+    color: #2563eb;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.profile-photo-upload input {
+    display: none;
+}
+
+.profile-photo-remove {
+    background: none;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0;
+    text-decoration: underline;
+}
+
+.profile-photo-remove:hover {
+    color: #0f172a;
+}
+
+.profile-photo-adjust {
+    background: none;
+    border: none;
+    color: #2563eb;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0;
+    text-decoration: underline;
+}
+
+.profile-photo-adjust:hover {
+    color: #1d4ed8;
+}
+
+.profile-photo-editor {
+    align-items: center;
+    display: flex;
+    inset: 0;
+    justify-content: center;
+    padding: 24px;
+    position: fixed;
+    z-index: 1000;
+}
+
+.profile-photo-editor[hidden] {
+    display: none;
+}
+
+.profile-photo-editor-backdrop {
+    background: rgba(15, 23, 42, 0.55);
+    inset: 0;
+    position: absolute;
+}
+
+.profile-photo-editor-dialog {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+    max-width: 420px;
+    padding: 24px;
+    position: relative;
+    width: 100%;
+    z-index: 1;
+}
+
+.profile-photo-editor-dialog h3 {
+    color: #0f172a;
+    font-size: 22px;
+    margin-bottom: 8px;
+}
+
+.profile-photo-editor-help {
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 18px;
+}
+
+.profile-photo-editor-viewport {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 18px;
+}
+
+.profile-photo-editor-viewport canvas {
+    border-radius: 50%;
+    cursor: grab;
+    display: block;
+    touch-action: none;
+}
+
+.profile-photo-editor-viewport canvas:active {
+    cursor: grabbing;
+}
+
+.profile-photo-editor-zoom {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.profile-photo-editor-zoom label {
+    align-items: center;
+    color: #334155;
+    display: flex;
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    gap: 10px;
+}
+
+.profile-photo-editor-zoom input[type="range"] {
+    flex: 1;
+}
+
+.profile-photo-editor-zoom .secondary-button {
+    min-width: 40px;
+    padding-inline: 0;
+}
+
+.profile-photo-editor-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.profile-photo-editor-actions .secondary-button,
+.profile-photo-editor-actions .primary-small-button {
+    min-width: 110px;
 }
 
 .profile-avatar.male {
