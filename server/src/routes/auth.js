@@ -3,6 +3,20 @@ const authService = require("../authService");
 
 const router = express.Router();
 
+function sessionCookieOptions(req) {
+  return req.app.get("sessionCookieOptions") || { path: "/" };
+}
+
+function saveSessionAndRespond(req, res, statusCode, body) {
+  req.session.save((err) => {
+    if (err) {
+      res.status(500).json({ error: "Could not save session." });
+      return;
+    }
+    res.status(statusCode).json(body);
+  });
+}
+
 router.get("/session", (req, res) => {
   const userId = req.session?.userId ?? null;
   res.json({
@@ -39,7 +53,7 @@ router.post("/signup", async (req, res) => {
       password,
     });
     req.session.userId = account.id;
-    res.status(201).json({ account });
+    saveSessionAndRespond(req, res, 201, { account });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -59,7 +73,7 @@ router.post("/login", async (req, res) => {
       return;
     }
     req.session.userId = account.id;
-    res.json({ account });
+    saveSessionAndRespond(req, res, 200, { account });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -71,7 +85,7 @@ router.post("/logout", (req, res) => {
       res.status(500).json({ error: "Could not log out." });
       return;
     }
-    res.clearCookie("connect.sid");
+    res.clearCookie("connect.sid", sessionCookieOptions(req));
     res.json({ ok: true });
   });
 });

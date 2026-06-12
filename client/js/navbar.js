@@ -23,6 +23,13 @@ async function renderNavbar(active = "") {
   container.innerHTML = "";
 
   if (session.isAuthenticated) {
+    let profile = null;
+    try {
+      profile = await ShareTripApi.apiFetch("/api/users/me/profile").then((data) => data.profile);
+    } catch (error) {
+      profile = null;
+    }
+
     const dashboardLink = document.createElement("a");
     dashboardLink.href = "/dashboard.html";
     dashboardLink.className = `nav-link${active === "dashboard" ? " active" : ""}`;
@@ -30,8 +37,28 @@ async function renderNavbar(active = "") {
 
     const profileLink = document.createElement("a");
     profileLink.href = "/my-profile.html";
-    profileLink.className = `nav-link${active === "profile" ? " active" : ""}`;
-    profileLink.textContent = "Profile";
+    profileLink.className = `nav-link nav-profile-link${active === "profile" ? " active" : ""}`;
+
+    const profileAvatar = document.createElement("span");
+    profileAvatar.className = "nav-profile-avatar";
+
+    if (profile?.profile_picture_url) {
+      const avatarImage = document.createElement("img");
+      avatarImage.src = profile.profile_picture_url;
+      avatarImage.alt = `${profile.fname || "Profile"} avatar`;
+      avatarImage.addEventListener("error", () => {
+        profileAvatar.textContent = getProfileInitials(profile);
+      });
+      profileAvatar.appendChild(avatarImage);
+    } else {
+      profileAvatar.textContent = getProfileInitials(profile);
+    }
+
+    const profileLabel = document.createElement("span");
+    profileLabel.textContent = "Profile";
+
+    profileLink.appendChild(profileAvatar);
+    profileLink.appendChild(profileLabel);
 
     const logoutBtn = document.createElement("button");
     logoutBtn.type = "button";
@@ -50,6 +77,13 @@ async function renderNavbar(active = "") {
   loginLink.className = "login-btn";
   loginLink.textContent = "Login / Sign Up";
   container.appendChild(loginLink);
+}
+
+function getProfileInitials(profile) {
+  const firstInitial = profile?.fname?.trim()?.[0] || "";
+  const lastInitial = profile?.lname?.trim()?.[0] || "";
+  const initials = `${firstInitial}${lastInitial}`.trim();
+  return initials || "ST";
 }
 
 window.ShareTripNavbar = { renderNavbar };
