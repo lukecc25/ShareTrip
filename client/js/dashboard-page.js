@@ -147,11 +147,15 @@ function renderRideCard(ride) {
       ? '<span class="ride-time-status">Past</span>'
       : "";
 
+  const flexibleBadge = ride.flexible
+    ? '<span class="flexible-badge">Flexible</span>'
+    : "";
+
   const offerDetails = isOffer
     ? `
       <div>
         <span>Passenger Seats</span>
-        <strong>${escapeHtml(remainingSeats)}/${escapeHtml(totalSeats)}</strong>
+        <strong>${escapeHtml(remainingSeats)}/${escapeHtml(totalSeats)} Seats Available</strong>
       </div>
       <div>
         <span>Cost</span>
@@ -167,11 +171,12 @@ function renderRideCard(ride) {
     : "";
 
   return `
-    <article class="ride-card" id="ride-${ride.id}">
+    <article class="ride-card ride-card--${typeClass}" id="ride-${ride.id}">
       <div class="ride-card-top">
         <div class="ride-card-badges">
           <span class="ride-type ${typeClass}">${escapeHtml(typeLabel)}</span>
           ${pastBadge}
+          ${flexibleBadge}
         </div>
         ${priceBlock}
       </div>
@@ -183,6 +188,7 @@ function renderRideCard(ride) {
       <div class="ride-details">
         <div><span>Start</span><strong>${escapeHtml(formatDateValue(ride.start_date))}</strong></div>
         <div><span>End</span><strong>${escapeHtml(formatDateValue(ride.end_date))}</strong></div>
+        ${ride.start_time ? `<div><span>Pickup Time</span><strong>${escapeHtml(ride.start_time)}</strong></div>` : ""}
         ${offerDetails}
         <div><span>Preference</span><strong>${escapeHtml(ride.gender_preference)}</strong></div>
       </div>
@@ -206,14 +212,19 @@ function renderRideForm(ride) {
       </div>
       <form class="ride-form" id="rideForm">
         <input type="hidden" name="rideId" value="${ride?.id ?? ""}">
+        <div class="ride-type-selector">
+          <p class="ride-type-selector-label">What would you like to do?</p>
+          <div class="ride-type-cards">
+            <button type="button" class="ride-type-card ${ride?.ride_type === 'offer' ? 'active' : ''}" data-type="offer">
+            <strong>Offer a Ride</strong>
+          </button>
+          <button type="button" class="ride-type-card ${ride?.ride_type === 'request' ? 'active' : ''}" data-type="request">
+            <strong>Request a Ride</strong>
+          </button>
+        </div>
+        <input type="hidden" name="rideType" id="rideType" value="${ride?.ride_type ?? ''}">
+        </div>
         <div class="form-row">
-          <div>
-            <label for="rideType">Request or Offer</label>
-            <select name="rideType" id="rideType" required>
-              <option value="offer" ${ride?.ride_type === "offer" ? "selected" : ""}>Offer</option>
-              <option value="request" ${ride?.ride_type === "request" ? "selected" : ""}>Request</option>
-            </select>
-          </div>
           <div>
             <label for="tripType">Trip Type</label>
             <select name="tripType" id="tripType" required>
@@ -225,16 +236,26 @@ function renderRideForm(ride) {
         <div class="form-row">
           <div>
             <label>Start Date</label>
-            <input type="date" name="startDate" value="${escapeHtml(ride?.start_date ?? "")}" required>
+            <input type="date" name="startDate" value="${escapeHtml(ride?.start_date ?? "")}" required class="date-input">
           </div>
           <div id="endDateField">
             <label>End Date</label>
-            <input type="date" name="endDate" value="${escapeHtml(ride?.end_date ?? "")}">
+            <input type="date" name="endDate" value="${escapeHtml(ride?.end_date ?? "")}" class="date-input">
           </div>
         </div>
         <div class="form-row">
           <div>
-            <label>Origin</label>
+            <label>Pickup Time</label>
+            <input type="time" name="startTime" value="${escapeHtml(ride?.start_time ?? "")}">
+          </div>
+          <div class="flexible-row" style="align-self: end; padding-bottom: 12px;">
+            <input type="checkbox" name="flexible" id="flexible" value="1" ${ride?.flexible ? "checked" : ""}>
+            <label for="flexible">Flexible on time</label>
+          </div>
+        </div>
+        <div class="form-row">
+          <div>
+            <label>Departure</label>
             <input type="text" name="origin" maxlength="75" value="${escapeHtml(ride?.origin ?? "")}" required>
           </div>
           <div>
@@ -242,10 +263,13 @@ function renderRideForm(ride) {
             <input type="text" name="destination" maxlength="75" value="${escapeHtml(ride?.destination ?? "")}" required>
           </div>
         </div>
-        <div class="form-row offer-only-fields">
-          <div class="offer-only-field">
+        <div class="offer-only-field">
             <label>Total Cost</label>
-            <input type="number" name="rideCost" min="0" step="0.01" value="${escapeHtml(ride?.ride_cost ?? "")}" required>
+            <div class="input-with-prefix">
+              <span class="input-prefix">$</span>
+              <input type="number" name="rideCost" min="0" step="0.01" value="${escapeHtml(ride?.ride_cost ?? "")}" required>
+            </div>
+            <p class="field-hint">Avg gas cost: ~$0.14/mi (5mi: $0.70 · 10mi: $1.40 · 30mi: $4.20 · 50mi: $7.00)</p>
           </div>
           <div class="offer-only-field">
             <label>Seats</label>
@@ -422,12 +446,20 @@ function initRideFormControls() {
 
   function updateEndDateField() {
     const isRoundTrip = tripType.value === "roundtrip";
-    endDateField.style.display = isRoundTrip ? "block" : "none";
-    endDateInput.required = isRoundTrip;
+    endDateField.style.display = isRoundTrip ? "block" : "none";    endDateInput.required = isRoundTrip;
   }
 
   function updateOfferFields() {
     const isOffer = rideType.value === "offer";
+    const isSelected = rideType.value !== "";
+    const formRows = document.querySelectorAll(
+      "#rideForm .form-row:not(.ride-type-selector), #rideForm .flexible-row, #rideForm button[type='submit']"
+    );
+
+    formRows.forEach((el) => {
+      el.style.display = isSelected ? "" : "none";
+    });
+
     offerFields.forEach((fieldGroup) => {
       fieldGroup.style.display = isOffer ? "grid" : "none";
       fieldGroup.querySelectorAll("input, select").forEach((field) => {
@@ -437,10 +469,27 @@ function initRideFormControls() {
     });
   }
 
-  rideType.addEventListener("change", updateOfferFields);
-  tripType.addEventListener("change", updateEndDateField);
+document.querySelectorAll(".ride-type-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      document.querySelectorAll(".ride-type-card").forEach((c) => c.classList.remove("active"));
+      card.classList.add("active");
+      rideType.value = card.dataset.type;
+      updateOfferFields();
+    });
+  });  tripType.addEventListener("change", updateEndDateField);
   updateEndDateField();
   updateOfferFields();
+
+  // Date input: auto-format as user types (YYYY-MM-DD)
+  document.querySelectorAll(".date-input").forEach((input) => {
+    input.addEventListener("input", (e) => {
+      let val = e.target.value.replace(/[^\d]/g, "");
+      if (val.length > 4) val = val.slice(0, 4) + "-" + val.slice(4);
+      if (val.length > 7) val = val.slice(0, 7) + "-" + val.slice(7);
+      if (val.length > 10) val = val.slice(0, 10);
+      e.target.value = val;
+    });
+  });
 }
 
 function bindFormEvents() {
@@ -463,6 +512,9 @@ function bindFormEvents() {
       seats: formData.get("seats"),
       rideCost: formData.get("rideCost"),
       genderPreference: formData.get("genderPreference"),
+      flexible: formData.get("flexible") === "1",
+      startTime: formData.get("startTime"),
+      endTime: formData.get("endTime"),
     };
 
     try {

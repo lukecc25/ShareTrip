@@ -363,7 +363,7 @@ async function cancelRide(rideId, ownerId) {
   }
 }
 
-function listCommentsFromStore(store, rideId) {
+function listCommentsFromStore(store, rideId, currentUserId) {
   return store.comments
     .filter((c) => Number(c.ride_id) === Number(rideId))
     .sort((a, b) => {
@@ -376,6 +376,7 @@ function listCommentsFromStore(store, rideId) {
         ...c,
         fname: account?.fname ?? "",
         lname: account?.lname ?? "",
+        is_own: currentUserId && c.user_id === currentUserId ? 1 : 0,
       };
     });
 }
@@ -400,6 +401,81 @@ async function addComment(rideId, userId, body) {
       body: text,
       created_at: now(),
     })
+  );
+}
+
+async function deleteComment(rideId, commentId, userId) {
+  const sb = getSupabase();
+
+  const existing = throwIfError(
+    await sb
+      .from("comments")
+      .select("id, user_id")
+      .eq("id", commentId)
+      .eq("ride_id", rideId)
+      .maybeSingle()
+  );
+  if (!existing) {
+    throw new Error("Comment not found.");
+  }
+  if (existing.user_id !== userId) {
+    throw new Error("You can only delete your own comments.");
+  }
+
+  throwIfError(
+    await sb.from("comments").delete().eq("id", commentId)
+  );
+}
+
+async function updateComment(rideId, commentId, userId, body) {
+  const text = body.trim().slice(0, 500);
+  if (!text) {
+    throw new Error("Please enter a comment before saving.");
+  }
+
+  const sb = getSupabase();
+
+  const existing = throwIfError(
+    await sb
+      .from("comments")
+      .select("id, user_id")
+      .eq("id", commentId)
+      .eq("ride_id", rideId)
+      .maybeSingle()
+  );
+  if (!existing) {
+    throw new Error("Comment not found.");
+  }
+  if (existing.user_id !== userId) {
+    throw new Error("You can only edit your own comments.");
+  }
+
+  throwIfError(
+    await sb
+      .from("comments")
+      .update({ body: text, updated_at: now() })
+      .eq("id", commentId)
+  );
+}
+
+async function deleteRating(rideId, ratedUserId, raterUserId) {
+  const sb = getSupabase();
+
+  const existing = throwIfError(
+    await sb
+      .from("ratings")
+      .select("id")
+      .eq("ride_id", rideId)
+      .eq("rated_user_id", ratedUserId)
+      .eq("rater_user_id", raterUserId)
+      .maybeSingle()
+  );
+  if (!existing) {
+    throw new Error("Rating not found.");
+  }
+
+  throwIfError(
+    await sb.from("ratings").delete().eq("id", existing.id)
   );
 }
 
@@ -516,7 +592,7 @@ async function getRideDetail(rideId, currentUserId) {
       };
     });
 
-  const comments = listCommentsFromStore(store, rideId);
+  const comments = listCommentsFromStore(store, rideId, currentUserId);
   const rideCompleted = ride.end_date < today();
 
   const people = [];
@@ -857,6 +933,9 @@ module.exports = {
   leaveRide,
   cancelRide,
   addComment,
+  deleteComment,
+  updateComment,
+  deleteRating,
   ratePerson,
   listPendingDriverOffers,
   listNotifications,
