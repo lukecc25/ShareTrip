@@ -86,10 +86,7 @@ body {
 
 .nav-profile-avatar {
     align-items: center;
-    background: #dbeafe;
-    border: 1px solid #bfdbfe;
     border-radius: 50%;
-    color: #2563eb;
     display: flex;
     flex-shrink: 0;
     font-size: 14px;
@@ -101,6 +98,23 @@ body {
     width: 44px;
 }
 
+.nav-profile-avatar.male {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    border: 1px solid #1d4ed8;
+    color: white;
+}
+
+.nav-profile-avatar.female {
+    background: linear-gradient(135deg, #db2777, #be185d);
+    border: 1px solid #be185d;
+    color: white;
+}
+
+.nav-profile-avatar.has-photo {
+    background: #e2e8f0;
+    border: 1px solid #cbd5e1;
+}
+
 .nav-profile-avatar img {
     display: block;
     height: 100%;
@@ -108,7 +122,17 @@ body {
     width: 100%;
 }
 
-.nav-profile-link.active .nav-profile-avatar {
+.nav-profile-link.active .nav-profile-avatar.male {
+    border-color: #1d4ed8;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.nav-profile-link.active .nav-profile-avatar.female {
+    border-color: #be185d;
+    box-shadow: 0 0 0 3px rgba(219, 39, 119, 0.12);
+}
+
+.nav-profile-link.active .nav-profile-avatar.has-photo {
     border-color: #2563eb;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }

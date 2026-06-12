@@ -47,15 +47,16 @@ async function renderNavbar(active = "") {
     profileAvatar.className = "nav-profile-avatar";
 
     if (profile?.profile_picture_url) {
+      profileAvatar.classList.add("has-photo");
       const avatarImage = document.createElement("img");
       avatarImage.src = profile.profile_picture_url;
       avatarImage.alt = `${profile.fname || "Profile"} avatar`;
       avatarImage.addEventListener("error", () => {
-        profileAvatar.textContent = getProfileInitials(profile);
+        showNavInitials(profileAvatar, profile);
       });
       profileAvatar.appendChild(avatarImage);
     } else {
-      profileAvatar.textContent = getProfileInitials(profile);
+      showNavInitials(profileAvatar, profile);
     }
 
     const profileLabel = document.createElement("span");
@@ -82,6 +83,16 @@ async function renderNavbar(active = "") {
   loginLink.className = "login-btn";
   loginLink.textContent = "Login / Sign Up";
   container.appendChild(loginLink);
+}
+
+function genderClass(gender) {
+  return String(gender || "").toLowerCase() === "female" ? "female" : "male";
+}
+
+function showNavInitials(profileAvatar, profile) {
+  profileAvatar.innerHTML = "";
+  profileAvatar.className = `nav-profile-avatar ${genderClass(profile?.gender)}`;
+  profileAvatar.textContent = getProfileInitials(profile);
 }
 
 function getProfileInitials(profile) {

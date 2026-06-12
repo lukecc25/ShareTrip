@@ -8,6 +8,8 @@ let state = {
   editProfilePicture: undefined,
   profilePhotoSource: null,
   photoEditorSettings: null,
+  viewingUserId: null,
+  isOwnProfile: true,
 };
 
 const PHOTO_EDITOR = {
@@ -468,8 +470,11 @@ function renderProfileHero(data) {
     <section class="profile-hero">
       ${renderAvatar(profile)}
       <div class="profile-hero-info">
-        <p class="eyebrow">My Profile</p>
-        <h1>${escapeHtml(profile.fname)} ${escapeHtml(profile.lname)}</h1>
+        <div class="profile-eyebrow-row">
+          <p class="eyebrow">${state.isOwnProfile ? "My Profile" : "Member Profile"}</p>
+          <span class="profile-gender">${escapeHtml(profile.gender || "")}</span>
+        </div>
+        <h1 class="profile-name">${escapeHtml(profile.fname)} ${escapeHtml(profile.lname)}</h1>
         <div class="profile-rating-summary">
           <strong>${escapeHtml(ratingText)}</strong>
           <span class="profile-rating-stars" aria-hidden="true">${stats.rating_average ? renderStars(stats.rating_average) : "☆☆☆☆☆"}</span>
@@ -483,13 +488,17 @@ function renderProfileHero(data) {
           </span>
         </div>
       </div>
-      <div class="profile-hero-actions">
+      ${
+        state.isOwnProfile
+          ? `<div class="profile-hero-actions">
         <label class="able-driver-toggle">
           <input type="checkbox" data-action="toggle-able-driver" ${ableDriver ? "checked" : ""}>
           Available to drive
         </label>
         <button type="button" class="secondary-button" data-action="edit-profile">Edit profile</button>
-      </div>
+      </div>`
+          : ""
+      }
     </section>`;
 }
 
@@ -520,15 +529,9 @@ function renderProfileEditForm(profile) {
         <input id="edit-phone" name="phone" type="tel" value="${escapeHtml(profile.phone || "")}" required>
         <label for="edit-email">Email</label>
         <input id="edit-email" name="email" type="email" value="${escapeHtml(profile.email || "")}" required>
-        <label for="edit-gender">Gender</label>
-        <select id="edit-gender" name="gender" required>
-          <option value="">Select Gender</option>
-          <option value="Male" ${profile.gender === "Male" ? "selected" : ""}>Male</option>
-          <option value="Female" ${profile.gender === "Female" ? "selected" : ""}>Female</option>
-        </select>
         <label class="able-driver-toggle profile-edit-toggle">
           <input type="checkbox" name="able_driver" ${u().isAbleDriver(profile) ? "checked" : ""}>
-          Available to drive
+          <span>Available to drive</span>
         </label>
         <div class="profile-edit-actions">
           <button type="submit" class="primary-small-button">Save changes</button>
@@ -553,18 +556,21 @@ function renderProfilePage(data) {
     ? renderProfileEditForm(data.profile)
     : renderProfileHero(data);
 
+  const reviewsHeading = state.isOwnProfile ? "Reviews about you" : "Reviews";
+  const tripsHeading = state.isOwnProfile ? "Trip history" : "Past trips";
+
   return `
     ${heroHtml}
     <section class="profile-section">
       <div class="profile-section-header">
-        <h2>Reviews about you</h2>
+        <h2>${reviewsHeading}</h2>
         <span>${reviews.length}</span>
       </div>
       ${reviewsHtml}
     </section>
     <section class="profile-section">
       <div class="profile-section-header">
-        <h2>Trip history</h2>
+        <h2>${tripsHeading}</h2>
         <span>${tripHistory.length}</span>
       </div>
       ${tripsHtml}
@@ -588,6 +594,10 @@ function render() {
 }
 
 function bindProfileEvents() {
+  if (!state.isOwnProfile) {
+    return;
+  }
+
   const root = document.getElementById("profile-root");
 
   const editBtn = root.querySelector('[data-action="edit-profile"]');
@@ -627,6 +637,7 @@ function bindProfileEvents() {
         });
         state.data.profile = updated;
         state.data.stats.able_driver = u().isAbleDriver(updated);
+        u().applyHideRequestRidesForDriverStatus(updated);
         showMessage(
           updated.able_driver
             ? "You are marked as available to drive."
@@ -690,7 +701,7 @@ function bindProfileEvents() {
           lname: formData.get("lname"),
           email: formData.get("email"),
           phone: formData.get("phone"),
-          gender: formData.get("gender"),
+          gender: state.data.profile.gender,
           able_driver: formData.get("able_driver") === "on",
         };
         if (state.editProfilePicture !== undefined) {
@@ -703,6 +714,7 @@ function bindProfileEvents() {
         });
         state.data.profile = updated;
         state.data.stats.able_driver = u().isAbleDriver(updated);
+        u().applyHideRequestRidesForDriverStatus(updated);
         state.editing = false;
         state.editProfilePicture = undefined;
         state.profilePhotoSource = null;
@@ -717,22 +729,42 @@ function bindProfileEvents() {
 }
 
 async function loadProfileOverview() {
+  if (state.viewingUserId) {
+    state.data = await ShareTripApi.apiFetch(
+      `/api/users/${encodeURIComponent(state.viewingUserId)}/overview`
+    );
+    return;
+  }
   state.data = await ShareTripApi.apiFetch("/api/users/me/overview");
 }
 
 async function initMyProfilePage() {
-  const profile = await ShareTripAuth.requireProfile();
-  if (!profile) {
+  if (!(await ShareTripAuth.requireSignedIn())) {
     return;
   }
 
-  await ShareTripNavbar.renderNavbar("profile");
+  const session = await ShareTripAuth.getSession();
+  const queryUserId = u().readQuery().get("user")?.trim();
+  state.viewingUserId = queryUserId || null;
+  state.isOwnProfile = !state.viewingUserId || state.viewingUserId === session.userId;
+
+  if (state.isOwnProfile) {
+    const profile = await ShareTripAuth.requireProfile();
+    if (!profile) {
+      return;
+    }
+  }
+
+  await ShareTripNavbar.renderNavbar(state.isOwnProfile ? "profile" : "dashboard");
+  document.title = state.isOwnProfile
+    ? "My Profile | ShareTrip"
+    : "Member Profile | ShareTrip";
 
   try {
     await loadProfileOverview();
     render();
   } catch (error) {
-    showMessage(error.message || "Unable to load your profile.", "error");
+    showMessage(error.message || "Unable to load profile.", "error");
   }
 }
 
