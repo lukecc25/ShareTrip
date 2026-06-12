@@ -214,14 +214,21 @@ function render() {
   const totalSeats = ride.total_seats;
   const splitCost = ride.split_cost;
   const passengerCount = ride.passenger_count ?? detail.people.length;
-  const driverName = fullName(ride);
+
+  // --- FIX APPLIED HERE ---
+  const rawFirstName = ride.driver_fname || ride.owner_fname || ride.fname || "";
+  const rawLastName = ride.driver_lname || ride.owner_lname || ride.lname || "";
+  const resolvedFullName = `${rawFirstName} ${rawLastName}`.trim();
+
+  const driverName = isOwner ? "You" : (resolvedFullName || ride.driver_name || ride.owner_name || "Unknown Driver");
 
   const driver = {
-    fname: ride.fname,
-    lname: ride.lname,
+    fname: rawFirstName || (isOwner ? "You" : driverName.split(" ")[0]),
+    lname: rawLastName || (isOwner ? "" : driverName.split(" ").slice(1).join(" ")),
     gender: ride.driver_gender,
     user_id: ride.owner_id,
   };
+  // ------------------------
 
   let actions = "";
   if (isOffer) {

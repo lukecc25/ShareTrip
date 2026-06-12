@@ -118,6 +118,35 @@ function renderRideCard(ride) {
   const splitCost = ride.split_cost;
   const commentCount = ride.comment_count;
 
+  // --- Dynamic Actual Name Resolution ---
+  let driverNameDisplay = "";
+  
+  if (isOffer) {
+    if (isOwner) {
+      driverNameDisplay = "You";
+    } else {
+      // Check common API naming patterns for the driver's actual name
+      const firstName = ride.driver_fname || ride.owner_fname || ride.user?.fname || "";
+      const lastName = ride.driver_lname || ride.owner_lname || ride.user?.lname || "";
+      const fullName = `${firstName} ${lastName}`.trim();
+
+      // Fallback to a single name field if names are not split into first/last properties
+      driverNameDisplay = fullName || ride.driver_name || ride.owner_name || "Unknown Member";
+    }
+  } else {
+    // If it's a Request, handle the assigned driver's actual name
+    if (ride.has_assigned_driver) {
+      const assignedFirstName = ride.assigned_driver_fname || ride.assigned_driver?.fname || "";
+      const assignedLastName = ride.assigned_driver_lname || ride.assigned_driver?.lname || "";
+      const assignedFullName = `${assignedFirstName} ${assignedLastName}`.trim();
+      
+      driverNameDisplay = assignedFullName || ride.assigned_driver_name || "Assigned Driver";
+    } else {
+      driverNameDisplay = "No driver assigned yet";
+    }
+  }
+  // ---------------------------------------
+
   let footer = `<a href="/ride-details.html?ride=${ride.id}" class="details-link">Details${
     commentCount > 0 ? ` (${commentCount})` : ""
   }</a>`;
@@ -180,6 +209,11 @@ function renderRideCard(ride) {
         </div>
         ${priceBlock}
       </div>
+      
+      <div class="ride-driver-info" style="margin-bottom: 10px; font-size: 0.9rem; color: #4a5568;">
+        <span>Driver:</span> <strong style="color: #2d3748;">${escapeHtml(driverNameDisplay)}</strong>
+      </div>
+
       <h2 class="route-title">
         <span>${escapeHtml(ride.origin)}</span>
         <span class="route-icon" aria-hidden="true">${routeIconSvg(ride.roundtrip)}</span>
