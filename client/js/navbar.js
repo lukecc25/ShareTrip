@@ -71,6 +71,7 @@ async function renderNavbar(active = "") {
     logoutBtn.addEventListener("click", () => ShareTripAuth.logout());
 
     container.appendChild(dashboardLink);
+    container.appendChild(profileLink);
     container.appendChild(donationLink);
     container.appendChild(logoutBtn);
     return;
