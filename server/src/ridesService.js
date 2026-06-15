@@ -258,8 +258,38 @@ async function saveRide(ownerId, payload) {
   return getRideById(row.id, ownerId);
 }
 
-async function joinRide(rideId, userId, partySize = 1) {
-  const seatsJoining = Math.max(1, Math.floor(Number(partySize) || 1));
+function normalizeGuests(guests, seatsJoining) {
+  const expected = Math.max(0, seatsJoining - 1);
+  const list = Array.isArray(guests) ? guests : [];
+  if (list.length !== expected) {
+    throw new Error(
+      expected === 0
+        ? "Guest details are not needed for a solo join."
+        : `Please provide details for ${expected} additional guest${expected === 1 ? "" : "s"}.`
+    );
+  }
+
+  return list.map((guest, index) => {
+    const name = String(guest?.name || "").trim();
+    if (!name) {
+      throw new Error(`Guest ${index + 1} name is required.`);
+    }
+    const phone = String(guest?.phone || "").trim();
+    return {
+      name: name.slice(0, 75),
+      phone: phone ? phone.slice(0, 20) : null,
+    };
+  });
+}
+
+async function joinRide(rideId, userId, options = {}) {
+  const partySizeInput =
+    typeof options === "number" ? options : Number(options?.partySize ?? options);
+  const seatsJoining = Math.max(1, Math.floor(Number(partySizeInput) || 1));
+  const guestDetails = normalizeGuests(
+    typeof options === "object" ? options.guests : [],
+    seatsJoining
+  );
   const store = await fetchStore();
   const ride = findRide(store, rideId);
   if (!ride || ride.ride_type !== "offer") {
@@ -302,6 +332,7 @@ async function joinRide(rideId, userId, partySize = 1) {
     ride_id: Number(rideId),
     user_id: userId,
     party_size: seatsJoining,
+    guest_details: guestDetails,
     created_at: now(),
   });
   if (passengerResult.error) {
@@ -607,6 +638,7 @@ async function getRideDetail(rideId, currentUserId) {
         email: account?.email,
         phone: account?.phone,
         user_id: p.user_id,
+        guest_details: p.guest_details || [],
       };
     });
 

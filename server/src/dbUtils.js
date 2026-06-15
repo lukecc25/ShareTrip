@@ -45,6 +45,21 @@ function normalizeNotification(row) {
   };
 }
 
+function normalizeGuestDetails(value) {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 function normalizeIdRow(row) {
   if (!row) {
     return null;
@@ -54,6 +69,7 @@ function normalizeIdRow(row) {
     id: Number(row.id),
     ride_id: Number(row.ride_id),
     party_size: Math.max(1, Number(row.party_size) || 1),
+    guest_details: normalizeGuestDetails(row.guest_details),
   };
 }
 

@@ -153,10 +153,16 @@ function ensureJoinRideModal() {
   modal.innerHTML = `
     <div class="join-ride-backdrop"></div>
     <div class="join-ride-dialog" role="dialog" aria-modal="true" aria-labelledby="join-ride-title">
-      <h3 id="join-ride-title">Join Ride</h3>
-      <p>How many people are joining?</p>
-      <label for="join-party-size">Number of people</label>
-      <input id="join-party-size" type="number" min="1" step="1" value="1">
+      <div class="join-ride-header">
+        <h3 id="join-ride-title">Join Ride</h3>
+        <p>How many people are joining?</p>
+        <label for="join-party-size">Number of people</label>
+        <input id="join-party-size" type="number" min="1" step="1" value="1">
+      </div>
+      <div class="join-party-guests-wrap">
+        <div id="join-party-guests" class="join-party-guests"></div>
+      </div>
+      <p id="join-party-error" class="join-party-error" hidden></p>
       <div class="join-ride-actions">
         <button type="button" class="secondary-button" data-action="cancel">Cancel</button>
         <button type="button" class="primary-small-button" data-action="confirm">Join Ride</button>
@@ -167,10 +173,64 @@ function ensureJoinRideModal() {
   return modal;
 }
 
+function renderJoinGuestFields(container, partySize, max) {
+  if (!container) {
+    return;
+  }
+
+  const count = Math.max(1, Math.min(max, Math.floor(Number(partySize) || 1)));
+  if (count <= 1) {
+    container.innerHTML = "";
+    return;
+  }
+
+  const groups = [];
+  for (let personNumber = 2; personNumber <= count; personNumber += 1) {
+    groups.push(`
+      <div class="join-guest-group">
+        <p class="join-guest-label">Person ${personNumber}</p>
+        <label>
+          Name
+          <input type="text" name="guestName" maxlength="75" required placeholder="Full name">
+        </label>
+        <label>
+          Phone <span class="field-optional">(optional)</span>
+          <input type="tel" name="guestPhone" maxlength="20" placeholder="Phone number">
+        </label>
+      </div>
+    `);
+  }
+
+  container.innerHTML = `
+    <p class="join-guest-intro">Add a name for each additional person joining with you.</p>
+    ${groups.join("")}
+  `;
+}
+
+function collectJoinGuestDetails(modal, partySize) {
+  const guests = [];
+  if (partySize <= 1) {
+    return guests;
+  }
+
+  modal.querySelectorAll(".join-guest-group").forEach((group, index) => {
+    const name = group.querySelector('input[name="guestName"]')?.value.trim() || "";
+    const phone = group.querySelector('input[name="guestPhone"]')?.value.trim() || "";
+    if (!name) {
+      throw new Error(`Person ${index + 2} name is required.`);
+    }
+    guests.push({ name, phone: phone || null });
+  });
+
+  return guests;
+}
+
 function promptJoinPartySize(maxSeats = 1) {
   return new Promise((resolve) => {
     const modal = ensureJoinRideModal();
     const input = modal.querySelector("#join-party-size");
+    const guestFields = modal.querySelector("#join-party-guests");
+    const errorEl = modal.querySelector("#join-party-error");
     const confirmBtn = modal.querySelector("[data-action='confirm']");
     const cancelBtn = modal.querySelector("[data-action='cancel']");
     const backdrop = modal.querySelector(".join-ride-backdrop");
@@ -179,12 +239,27 @@ function promptJoinPartySize(maxSeats = 1) {
     input.max = String(max);
     input.min = "1";
     input.value = "1";
+    if (errorEl) {
+      errorEl.hidden = true;
+      errorEl.textContent = "";
+    }
+    renderJoinGuestFields(guestFields, 1, max);
     modal.hidden = false;
     input.focus();
 
-    function onInput() {
+    function showJoinError(message) {
+      if (!errorEl) {
+        return;
+      }
+      errorEl.textContent = message;
+      errorEl.hidden = !message;
+    }
+
+    function onPartySizeChange() {
       const value = Math.floor(Number(input.value) || 1);
       input.value = String(Math.max(1, Math.min(max, value)));
+      renderJoinGuestFields(guestFields, input.value, max);
+      showJoinError("");
     }
 
     function cleanup() {
@@ -193,13 +268,18 @@ function promptJoinPartySize(maxSeats = 1) {
       cancelBtn.removeEventListener("click", onCancel);
       backdrop.removeEventListener("click", onCancel);
       input.removeEventListener("keydown", onKeydown);
-      input.removeEventListener("input", onInput);
+      input.removeEventListener("input", onPartySizeChange);
     }
 
     function onConfirm() {
-      const value = Math.max(1, Math.min(max, Math.floor(Number(input.value) || 1)));
-      cleanup();
-      resolve(value);
+      const partySize = Math.max(1, Math.min(max, Math.floor(Number(input.value) || 1)));
+      try {
+        const guests = collectJoinGuestDetails(modal, partySize);
+        cleanup();
+        resolve({ partySize, guests });
+      } catch (error) {
+        showJoinError(error.message);
+      }
     }
 
     function onCancel() {
@@ -221,7 +301,112 @@ function promptJoinPartySize(maxSeats = 1) {
     cancelBtn.addEventListener("click", onCancel);
     backdrop.addEventListener("click", onCancel);
     input.addEventListener("keydown", onKeydown);
-    input.addEventListener("input", onInput);
+    input.addEventListener("input", onPartySizeChange);
+  });
+}
+
+const ALERT_AUTO_DISMISS_MS = 5000;
+const ALERT_FADE_MS = 400;
+const siteAlertTimers = new WeakMap();
+
+function clearSiteAlertTimer(element) {
+  const timers = siteAlertTimers.get(element);
+  if (!timers) {
+    return;
+  }
+  clearTimeout(timers);
+  siteAlertTimers.delete(element);
+}
+
+function dismissSiteAlert(element, onDismiss) {
+  if (!element || element.hidden || element.classList.contains("is-fading")) {
+    return;
+  }
+
+  clearSiteAlertTimer(element);
+  element.classList.add("is-fading");
+
+  setTimeout(() => {
+    element.hidden = true;
+    element.innerHTML = "";
+    element.classList.remove("error", "is-fading");
+    onDismiss?.();
+    syncSiteHeaderOffset();
+  }, ALERT_FADE_MS);
+}
+
+function fadeOutElement(element, onComplete) {
+  if (!element || element.classList.contains("is-fading")) {
+    return;
+  }
+
+  element.classList.add("is-fading");
+  setTimeout(() => {
+    element.classList.remove("is-fading");
+    onComplete?.();
+  }, ALERT_FADE_MS);
+}
+
+function renderSiteAlert(element, text, options = {}) {
+  if (!element) {
+    return;
+  }
+
+  const { type = "success", onDismiss } = options;
+
+  clearSiteAlertTimer(element);
+
+  if (!text) {
+    element.hidden = true;
+    element.innerHTML = "";
+    element.classList.remove("error", "is-fading");
+    syncSiteHeaderOffset();
+    return;
+  }
+
+  element.hidden = false;
+  element.classList.remove("is-fading");
+  element.className = `dashboard-message site-fixed-alert${type === "error" ? " error" : ""}`;
+  element.innerHTML = `
+    <div class="site-alert-row">
+      <p class="site-alert-text">${escapeHtml(text)}</p>
+      <button type="button" class="site-alert-close" aria-label="Close notification">&times;</button>
+    </div>`;
+
+  const dismiss = () => dismissSiteAlert(element, onDismiss);
+
+  element.querySelector(".site-alert-close")?.addEventListener("click", dismiss);
+  siteAlertTimers.set(element, setTimeout(dismiss, ALERT_AUTO_DISMISS_MS));
+
+  syncSiteHeaderOffset();
+}
+
+function syncSiteHeaderOffset() {
+  requestAnimationFrame(() => {
+    const notificationBanner = document.getElementById("notification-banner");
+    const bannerHeight =
+      notificationBanner &&
+      !notificationBanner.hidden &&
+      notificationBanner.querySelector(".notification-item")
+        ? notificationBanner.offsetHeight
+        : 0;
+
+    let messageHeight = 0;
+    ["dashboard-message", "profile-message", "page-message"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el && !el.hidden && el.textContent.trim()) {
+        messageHeight = el.offsetHeight;
+      }
+    });
+
+    document.documentElement.style.setProperty(
+      "--notification-banner-height",
+      `${bannerHeight}px`
+    );
+    document.documentElement.style.setProperty(
+      "--site-message-height",
+      `${messageHeight}px`
+    );
   });
 }
 
@@ -242,6 +427,9 @@ window.ShareTripUtils = {
   saveSameGenderOnlyPreference,
   formatDestination,
   promptJoinPartySize,
+  renderSiteAlert,
+  fadeOutElement,
+  syncSiteHeaderOffset,
   readQuery,
   setQuery,
 };

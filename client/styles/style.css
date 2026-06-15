@@ -7,7 +7,8 @@
 :root {
     --navbar-height: 80px;
     --notification-banner-height: 0px;
-    --site-header-offset: calc(var(--navbar-height) + var(--notification-banner-height));
+    --site-message-height: 0px;
+    --site-header-offset: calc(var(--navbar-height) + var(--notification-banner-height) + var(--site-message-height));
 }
 
 body {

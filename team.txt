@@ -8,3 +8,91 @@ John@example.com  password
 Test
 Additional info
 as;dlkfj
+
+
+ShareTrip — Sales Pitch
+=========================
+
+The problem
+-----------
+Every day, people drive the same routes with empty seats while others pay full price for gas, rideshare apps, or public transit that does not go where they need. Travel is expensive, lonely, and wasteful. Most carpool tools are either too corporate, too complicated, or built for strangers with no trust layer.
+
+The solution
+------------
+ShareTrip is a community ride board where members offer seats or request a ride, split costs fairly, and build trust through profiles, ratings, and real names—not anonymous pins on a map.
+
+One line pitch
+--------------
+ShareTrip connects drivers and passengers in one simple ride board so people save money, share the road, and cut down on solo driving.
+
+Who it is for
+-------------
+- Commuters who want to split gas on regular routes
+- Students and coworkers heading the same direction
+- Drivers with extra seats who want to offset trip costs
+- Passengers who need a ride but do not want to pay full rideshare prices
+- Community-minded people who want fewer cars on the road
+
+What ShareTrip does today
+-------------------------
+
+Ride Board
+- Browse all open ride offers and requests in one place
+- Search by origin, destination, state, or people
+- Filter to hide driver requests or show only rides from people with the same gender
+- View “All Rides” or “My Rides” (posted, joined, and past trips)
+
+Post a ride in minutes
+- Offer a ride with seats, total cost, pickup time, and trip type (one way or round trip)
+- Request a ride when you need someone to drive
+- Add departure, destination, and optional destination state
+- Set gender preference on offers (no preference or same gender only)
+- Mark trips as flexible on time
+
+Join and ride together
+- Join open ride offers directly from the board or ride details page
+- Choose how many people are joining (party size)
+- Enter name and optional phone number for each additional passenger
+- Automatic cost split shows each person’s share as seats fill up
+- Leave a ride or cancel your own post when plans change
+
+Driver requests workflow
+- Passengers post a request; available drivers can volunteer to drive
+- Ride owners review pending driver offers and accept or decline
+- Notifications alert members when offers are accepted or declined
+
+Trust and community
+- Member profiles with photo, gender badge, trip stats, and reviews
+- View any member’s profile from ride details before you travel together
+- Rate drivers and passengers after completed trips
+- Comment on ride posts to ask questions before joining
+- Gender-colored profile avatars and navbar identity so members feel like real people
+
+Smart, sticky experience
+- Fixed navbar and notifications stay visible while scrolling
+- In-app notifications with dismiss and auto-fade after 5 seconds
+- Success and error alerts (joined ride, posted ride, etc.) pinned under the navbar
+- Profile picture upload with crop/zoom before save
+- “Available to drive” status ties into what each member sees on the board
+
+Why ShareTrip wins
+------------------
+1. Two-sided marketplace — not just drivers posting; passengers can request rides too.
+2. Built for trust — profiles, ratings, comments, and gender preferences reduce uncertainty.
+3. Fair and transparent — total trip cost and per-person split are visible up front.
+4. Flexible for real life — party size, guest names, round trips, flexible times, and filters.
+5. Simple UX — one Ride Board, one create flow, one join flow. No app download required.
+
+The value proposition
+---------------------
+For passengers: cheaper trips, more options, and a community feel instead of a random algorithm.
+
+For drivers: help cover gas, fill empty seats, and meet people going the same way.
+
+For communities: fewer solo car trips, lower emissions, and a shared resource that gets better as more people join.
+
+Call to action
+--------------
+Create a free account, post your next trip, or browse the Ride Board today. Whether you have an extra seat or need one, ShareTrip makes the ride shared—and the cost shared too.
+
+Live demo: https://sharetrip-lq58.onrender.com

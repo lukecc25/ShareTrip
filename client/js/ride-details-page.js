@@ -121,6 +121,18 @@ function renderPersonCard(person, ride, role) {
     ? (ride.driver_rating_count ?? person.rating_count ?? 0)
     : (person.rating_count ?? 0);
 
+  const guestList =
+    !isDriver && Array.isArray(person.guest_details) && person.guest_details.length
+      ? `<ul class="passenger-guest-list">${person.guest_details
+          .map(
+            (guest) =>
+              `<li><strong>${escapeHtml(guest.name)}</strong>${
+                guest.phone ? ` · ${escapeHtml(guest.phone)}` : ""
+              }</li>`
+          )
+          .join("")}</ul>`
+      : "";
+
   return `
     <article class="person-card">
       <div class="person-row ${isDriver ? "driver" : ""}">
@@ -147,6 +159,7 @@ function renderPersonCard(person, ride, role) {
       <div class="person-actions">
         ${renderViewProfileLink(userId)}
       </div>
+      ${guestList}
       ${
         canRate
           ? renderRatingForm(
@@ -204,6 +217,17 @@ function renderEditCommentForm(comment, rideId) {
         </div>
       </form>
     </article>`;
+}
+
+function updatePageMessage() {
+  const messageEl = document.getElementById("page-message");
+  u().renderSiteAlert(messageEl, message, {
+    type: messageType,
+    onDismiss: () => {
+      message = "";
+      messageType = "success";
+    },
+  });
 }
 
 function render() {
@@ -265,11 +289,6 @@ function render() {
   root.innerHTML = `
     <main class="ride-detail-page">
       <a href="/dashboard.html" class="back-link">Back to Ride Board</a>
-      ${
-        message
-          ? `<div class="dashboard-message ${messageType === "error" ? "error" : ""}">${escapeHtml(message)}</div>`
-          : ""
-      }
       <article class="detail-card">
         <div class="ride-card-top">
           <span class="ride-type ${typeClass}">${escapeHtml(typeLabel)}</span>
@@ -331,6 +350,7 @@ function render() {
   `;
 
   bindEvents(ride.id);
+  updatePageMessage();
 }
 
 function bindEvents(rideId) {
@@ -366,13 +386,13 @@ function bindEvents(rideId) {
           return;
         }
         if (action === "join") {
-          const partySize = await u().promptJoinPartySize(button.dataset.remainingSeats);
-          if (!partySize) {
+          const joinDetails = await u().promptJoinPartySize(button.dataset.remainingSeats);
+          if (!joinDetails) {
             return;
           }
           await ShareTripApi.apiFetch(`/api/rides/${targetRideId}/join`, {
             method: "POST",
-            body: JSON.stringify({ partySize }),
+            body: JSON.stringify(joinDetails),
           });
           window.location.reload();
           return;
@@ -518,11 +538,16 @@ function bindCommentEditForm() {
 }
 
 function showDetailError(text) {
-  const { escapeHtml } = u();
+  message = text;
+  messageType = "error";
+  updatePageMessage();
   document.getElementById("ride-detail-root").innerHTML = `
     <main class="ride-detail-page">
       <a href="/dashboard.html" class="back-link">Back to Ride Board</a>
-      <div class="dashboard-message error">${escapeHtml(text)}</div>
+      <section class="empty-rides">
+        <h2>Could not load ride</h2>
+        <p>Return to the ride board and try again.</p>
+      </section>
     </main>`;
 }
 
