@@ -244,7 +244,7 @@ function render() {
     } else if (hasJoined) {
       actions = '<span class="ride-status">Joined</span>';
     } else if (remainingSeats > 0) {
-      actions = `<button type="button" class="primary-small-button" data-action="join" data-ride-id="${ride.id}">Join Ride</button>`;
+      actions = `<button type="button" class="primary-small-button" data-action="join" data-ride-id="${ride.id}" data-remaining-seats="${remainingSeats}">Join Ride</button>`;
     } else {
       actions = '<span class="ride-status full">Full</span>';
     }
@@ -282,7 +282,7 @@ function render() {
         <h1 class="route-title detail-route">
           <span>${escapeHtml(ride.origin)}</span>
           <span class="route-icon" aria-hidden="true">${routeIconSvg(Boolean(ride.roundtrip))}</span>
-          <span>${escapeHtml(ride.destination)}</span>
+          <span>${escapeHtml(u().formatDestination(ride))}</span>
         </h1>
         <div class="detail-summary-grid">
           <div class="posted-by-row"><span>Posted by</span><div><strong>${escapeHtml(driverName)}</strong>${!isOwner ? renderViewProfileLink(ride.owner_id) : ""}</div></div>
@@ -366,8 +366,13 @@ function bindEvents(rideId) {
           return;
         }
         if (action === "join") {
+          const partySize = await u().promptJoinPartySize(button.dataset.remainingSeats);
+          if (!partySize) {
+            return;
+          }
           await ShareTripApi.apiFetch(`/api/rides/${targetRideId}/join`, {
             method: "POST",
+            body: JSON.stringify({ partySize }),
           });
           window.location.reload();
           return;

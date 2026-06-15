@@ -203,7 +203,7 @@ function renderRideCard(ride) {
         <button type="button" class="secondary-button" data-action="leave" data-ride-id="${ride.id}">Leave Ride</button>
       </div>`;
   } else if (isOffer && remainingSeats > 0) {
-    footer += `<button type="button" class="primary-small-button" data-action="join" data-ride-id="${ride.id}">Join Ride</button>`;
+    footer += `<button type="button" class="primary-small-button" data-action="join" data-ride-id="${ride.id}" data-remaining-seats="${remainingSeats}">Join Ride</button>`;
   } else if (isOffer) {
     footer += `<span class="ride-status full">Full</span>`;
   } else if (!isOffer) {
@@ -256,7 +256,7 @@ function renderRideCard(ride) {
       <h2 class="route-title">
         <span>${escapeHtml(ride.origin)}</span>
         <span class="route-icon" aria-hidden="true">${routeIconSvg(ride.roundtrip)}</span>
-        <span>${escapeHtml(ride.destination)}</span>
+        <span>${escapeHtml(u().formatDestination(ride))}</span>
       </h2>
       <div class="ride-details">
         <div><span>Start</span><strong>${escapeHtml(formatDateValue(ride.start_date))}</strong></div>
@@ -336,7 +336,8 @@ function renderRideForm(ride) {
             <input type="text" name="destination" maxlength="75" value="${escapeHtml(ride?.destination ?? "")}" required>
           </div>
         </div>
-        <div class="offer-only-field">
+        <div class="form-row destination-state-row">
+          <div class="offer-only-fields">
             <label>Total Cost</label>
             <div class="input-with-prefix">
               <span class="input-prefix">$</span>
@@ -344,7 +345,13 @@ function renderRideForm(ride) {
             </div>
             <p class="field-hint">Avg gas cost: ~$0.14/mi (5mi: $0.70 · 10mi: $1.40 · 30mi: $4.20 · 50mi: $7.00)</p>
           </div>
-          <div class="offer-only-field">
+          <div>
+            <label for="destinationState">State</label>
+            <input type="text" id="destinationState" name="destinationState" maxlength="50" value="${escapeHtml(ride?.destination_state ?? "")}" placeholder="Optional">
+          </div>
+        </div>
+        <div class="form-row offer-only-fields">
+          <div>
             <label>Seats</label>
             <input type="number" name="seats" min="1" step="1" value="${escapeHtml(ride?.seats ?? "1")}" required>
           </div>
@@ -517,6 +524,7 @@ function initRideFormControls() {
   const tripType = document.getElementById("tripType");
   const endDateField = document.getElementById("endDateField");
   const offerFields = document.querySelectorAll(".offer-only-fields");
+  const destinationStateRow = document.querySelector(".destination-state-row");
 
   if (!rideType || !tripType || !endDateField) {
     return;
@@ -526,22 +534,29 @@ function initRideFormControls() {
 
   function updateEndDateField() {
     const isRoundTrip = tripType.value === "roundtrip";
-    endDateField.style.display = isRoundTrip ? "block" : "none";    endDateInput.required = isRoundTrip;
+    endDateField.style.display = isRoundTrip ? "block" : "none";
+    endDateInput.required = isRoundTrip;
   }
 
   function updateOfferFields() {
     const isOffer = rideType.value === "offer";
     const isSelected = rideType.value !== "";
     const formRows = document.querySelectorAll(
-      "#rideForm .form-row:not(.ride-type-selector), #rideForm .flexible-row, #rideForm button[type='submit']"
+      "#rideForm .form-row:not(.ride-type-selector):not(.destination-state-row):not(.offer-only-fields), #rideForm .flexible-row, #rideForm button[type='submit']"
     );
 
     formRows.forEach((el) => {
       el.style.display = isSelected ? "" : "none";
     });
 
+    if (destinationStateRow) {
+      destinationStateRow.style.display = isSelected ? "" : "none";
+      destinationStateRow.classList.toggle("state-only", isSelected && !isOffer);
+    }
+
     offerFields.forEach((fieldGroup) => {
-      fieldGroup.style.display = isOffer ? "grid" : "none";
+      const isFormRow = fieldGroup.classList.contains("form-row");
+      fieldGroup.style.display = isOffer ? (isFormRow ? "grid" : "block") : "none";
       fieldGroup.querySelectorAll("input, select").forEach((field) => {
         field.disabled = !isOffer;
         field.required = isOffer;
@@ -549,14 +564,16 @@ function initRideFormControls() {
     });
   }
 
-document.querySelectorAll(".ride-type-card").forEach((card) => {
+  document.querySelectorAll(".ride-type-card").forEach((card) => {
     card.addEventListener("click", () => {
       document.querySelectorAll(".ride-type-card").forEach((c) => c.classList.remove("active"));
       card.classList.add("active");
       rideType.value = card.dataset.type;
       updateOfferFields();
     });
-  });  tripType.addEventListener("change", updateEndDateField);
+  });
+
+  tripType.addEventListener("change", updateEndDateField);
   updateEndDateField();
   updateOfferFields();
 
@@ -589,6 +606,7 @@ function bindFormEvents() {
       endDate: formData.get("endDate"),
       origin: formData.get("origin"),
       destination: formData.get("destination"),
+      destinationState: formData.get("destinationState"),
       seats: formData.get("seats"),
       rideCost: formData.get("rideCost"),
       genderPreference: formData.get("genderPreference"),
@@ -713,7 +731,14 @@ function bindRideActions() {
           return;
         }
         if (action === "join") {
-          await ShareTripApi.apiFetch(`/api/rides/${rideId}/join`, { method: "POST" });
+          const partySize = await u().promptJoinPartySize(button.dataset.remainingSeats);
+          if (!partySize) {
+            return;
+          }
+          await ShareTripApi.apiFetch(`/api/rides/${rideId}/join`, {
+            method: "POST",
+            body: JSON.stringify({ partySize }),
+          });
           window.location.href = "/dashboard.html?joined=1";
         } else if (action === "leave") {
           await ShareTripApi.apiFetch(`/api/rides/${rideId}/leave`, { method: "POST" });

@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS rides (
     end_date TEXT NOT NULL,
     origin TEXT NOT NULL,
     destination TEXT NOT NULL,
+    destination_state TEXT,
     ride_cost REAL NOT NULL DEFAULT 0,
     gender_preference TEXT NOT NULL DEFAULT 'No preference'
         CHECK (gender_preference IN ('Same gender only', 'No preference')),
@@ -62,6 +63,7 @@ CREATE TABLE IF NOT EXISTS passengers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ride_id INTEGER NOT NULL,
     user_id TEXT NOT NULL,
+    party_size INTEGER NOT NULL DEFAULT 1 CHECK (party_size >= 1),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (ride_id, user_id),
     FOREIGN KEY (ride_id) REFERENCES rides(id) ON DELETE CASCADE,

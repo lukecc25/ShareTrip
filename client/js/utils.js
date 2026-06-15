@@ -128,6 +128,103 @@ function setQuery(params) {
   window.location.href = url.toString();
 }
 
+function formatDestination(ride) {
+  const destination = String(ride?.destination || "").trim();
+  const state = String(ride?.destination_state || "").trim();
+  if (!destination) {
+    return state;
+  }
+  if (!state) {
+    return destination;
+  }
+  return `${destination}, ${state}`;
+}
+
+function ensureJoinRideModal() {
+  let modal = document.getElementById("join-ride-modal");
+  if (modal) {
+    return modal;
+  }
+
+  modal = document.createElement("div");
+  modal.id = "join-ride-modal";
+  modal.className = "join-ride-modal";
+  modal.hidden = true;
+  modal.innerHTML = `
+    <div class="join-ride-backdrop"></div>
+    <div class="join-ride-dialog" role="dialog" aria-modal="true" aria-labelledby="join-ride-title">
+      <h3 id="join-ride-title">Join Ride</h3>
+      <p>How many people are joining?</p>
+      <label for="join-party-size">Number of people</label>
+      <input id="join-party-size" type="number" min="1" step="1" value="1">
+      <div class="join-ride-actions">
+        <button type="button" class="secondary-button" data-action="cancel">Cancel</button>
+        <button type="button" class="primary-small-button" data-action="confirm">Join Ride</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  return modal;
+}
+
+function promptJoinPartySize(maxSeats = 1) {
+  return new Promise((resolve) => {
+    const modal = ensureJoinRideModal();
+    const input = modal.querySelector("#join-party-size");
+    const confirmBtn = modal.querySelector("[data-action='confirm']");
+    const cancelBtn = modal.querySelector("[data-action='cancel']");
+    const backdrop = modal.querySelector(".join-ride-backdrop");
+    const max = Math.max(1, Number(maxSeats) || 1);
+
+    input.max = String(max);
+    input.min = "1";
+    input.value = "1";
+    modal.hidden = false;
+    input.focus();
+
+    function onInput() {
+      const value = Math.floor(Number(input.value) || 1);
+      input.value = String(Math.max(1, Math.min(max, value)));
+    }
+
+    function cleanup() {
+      modal.hidden = true;
+      confirmBtn.removeEventListener("click", onConfirm);
+      cancelBtn.removeEventListener("click", onCancel);
+      backdrop.removeEventListener("click", onCancel);
+      input.removeEventListener("keydown", onKeydown);
+      input.removeEventListener("input", onInput);
+    }
+
+    function onConfirm() {
+      const value = Math.max(1, Math.min(max, Math.floor(Number(input.value) || 1)));
+      cleanup();
+      resolve(value);
+    }
+
+    function onCancel() {
+      cleanup();
+      resolve(null);
+    }
+
+    function onKeydown(event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        onConfirm();
+      }
+      if (event.key === "Escape") {
+        onCancel();
+      }
+    }
+
+    confirmBtn.addEventListener("click", onConfirm);
+    cancelBtn.addEventListener("click", onCancel);
+    backdrop.addEventListener("click", onCancel);
+    input.addEventListener("keydown", onKeydown);
+    input.addEventListener("input", onInput);
+  });
+}
+
 window.ShareTripUtils = {
   escapeHtml,
   formatDateValue,
@@ -143,6 +240,8 @@ window.ShareTripUtils = {
   applyHideRequestRidesForDriverStatus,
   loadSameGenderOnlyPreference,
   saveSameGenderOnlyPreference,
+  formatDestination,
+  promptJoinPartySize,
   readQuery,
   setQuery,
 };
