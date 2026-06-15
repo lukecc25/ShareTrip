@@ -1,0 +1,2 @@
+ALTER TABLE passengers
+ADD COLUMN IF NOT EXISTS party_size INTEGER NOT NULL DEFAULT 1 CHECK (party_size >= 1);

@@ -53,6 +53,7 @@ function normalizeIdRow(row) {
     ...row,
     id: Number(row.id),
     ride_id: Number(row.ride_id),
+    party_size: Math.max(1, Number(row.party_size) || 1),
   };
 }
 

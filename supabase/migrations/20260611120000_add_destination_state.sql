@@ -1,0 +1,2 @@
+ALTER TABLE rides
+ADD COLUMN IF NOT EXISTS destination_state TEXT;

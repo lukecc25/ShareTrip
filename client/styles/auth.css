@@ -27,7 +27,6 @@ body.auth-body::before {
         url("/images/derwiki-road-1958388_1920.webp") center / cover fixed no-repeat;
 }
 
-#navbar-root,
 .auth-page,
 .profile-page {
     position: relative;

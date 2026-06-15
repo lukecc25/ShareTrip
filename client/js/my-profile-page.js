@@ -445,7 +445,7 @@ function renderTripCard(ride) {
       <h2 class="route-title">
         <span>${escapeHtml(ride.origin)}</span>
         <span class="route-icon" aria-hidden="true">${routeIconSvg(ride.roundtrip)}</span>
-        <span>${escapeHtml(ride.destination)}</span>
+        <span>${escapeHtml(u().formatDestination(ride))}</span>
       </h2>
       <div class="ride-details">
         <div><span>Start</span><strong>${escapeHtml(formatDateValue(ride.start_date))}</strong></div>

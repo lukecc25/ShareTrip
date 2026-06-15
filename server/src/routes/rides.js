@@ -130,7 +130,7 @@ router.put("/:id", requireApiAuth, async (req, res) => {
 
 router.post("/:id/join", requireApiAuth, async (req, res) => {
   try {
-    await ridesService.joinRide(req.params.id, req.userId);
+    await ridesService.joinRide(req.params.id, req.userId, req.body?.partySize);
     res.json({ ok: true });
   } catch (err) {
     res.status(400).json({ error: err.message });

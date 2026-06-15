@@ -20,9 +20,10 @@ function findRide(store, id) {
   return store.rides.find((r) => Number(r.id) === Number(id)) || null;
 }
 
-function passengerCount(store, rideId) {
-  return store.passengers.filter((p) => Number(p.ride_id) === Number(rideId))
-    .length;
+function passengerSeatsUsed(store, rideId) {
+  return store.passengers
+    .filter((p) => Number(p.ride_id) === Number(rideId))
+    .reduce((sum, passenger) => sum + Math.max(1, Number(passenger.party_size) || 1), 0);
 }
 
 function nameMatches(account, search) {
@@ -45,7 +46,7 @@ async function upsertProfile(userId, data) {
 
 function enrichRide(row, currentUserId, store) {
   const owner = findAccount(store, row.owner_id);
-  const pCount = passengerCount(store, row.id);
+  const pCount = passengerSeatsUsed(store, row.id);
   const currentUserJoined = currentUserId
     ? store.passengers.some(
         (p) =>
@@ -123,7 +124,8 @@ async function listRides({ scope = "all", search = "" }, currentUserId) {
     rows = rows.filter((r) => {
       if (
         r.origin.toLowerCase().includes(q.toLowerCase()) ||
-        r.destination.toLowerCase().includes(q.toLowerCase())
+        r.destination.toLowerCase().includes(q.toLowerCase()) ||
+        String(r.destination_state || "").toLowerCase().includes(q.toLowerCase())
       ) {
         return true;
       }
@@ -176,6 +178,11 @@ async function getRideById(rideId, currentUserId) {
   return enrichRide(row, currentUserId, store);
 }
 
+function normalizeDestinationState(value) {
+  const trimmed = String(value || "").trim();
+  return trimmed ? trimmed.slice(0, 50) : null;
+}
+
 async function saveRide(ownerId, payload) {
   const isOffer = payload.rideType === "offer";
   const roundtrip = payload.tripType === "roundtrip";
@@ -186,6 +193,7 @@ async function saveRide(ownerId, payload) {
   const genderPreference = isOffer
     ? normalizeGenderPreference(payload.genderPreference)
     : "No preference";
+  const destinationState = normalizeDestinationState(payload.destinationState);
   const timestamp = now();
   const sb = getSupabase();
 
@@ -213,6 +221,7 @@ async function saveRide(ownerId, payload) {
           end_date: endDate,
           origin: payload.origin,
           destination: payload.destination,
+          destination_state: destinationState,
           ride_cost: rideCost,
           gender_preference: genderPreference,
           updated_at: timestamp,
@@ -235,6 +244,7 @@ async function saveRide(ownerId, payload) {
         end_date: endDate,
         origin: payload.origin,
         destination: payload.destination,
+        destination_state: destinationState,
         ride_cost: rideCost,
         gender_preference: genderPreference,
         assigned_driver_id: null,
@@ -248,7 +258,8 @@ async function saveRide(ownerId, payload) {
   return getRideById(row.id, ownerId);
 }
 
-async function joinRide(rideId, userId) {
+async function joinRide(rideId, userId, partySize = 1) {
+  const seatsJoining = Math.max(1, Math.floor(Number(partySize) || 1));
   const store = await fetchStore();
   const ride = findRide(store, rideId);
   if (!ride || ride.ride_type !== "offer") {
@@ -257,8 +268,12 @@ async function joinRide(rideId, userId) {
   if (ride.owner_id === userId) {
     throw new Error("You cannot join your own ride.");
   }
-  if (ride.seats < 1) {
-    throw new Error("That ride is full.");
+  if (ride.seats < seatsJoining) {
+    throw new Error(
+      seatsJoining === 1
+        ? "That ride is full."
+        : `Only ${ride.seats} seat${ride.seats === 1 ? "" : "s"} available.`
+    );
   }
 
   const joiner = findAccount(store, userId);
@@ -286,6 +301,7 @@ async function joinRide(rideId, userId) {
   const passengerResult = await sb.from("passengers").insert({
     ride_id: Number(rideId),
     user_id: userId,
+    party_size: seatsJoining,
     created_at: now(),
   });
   if (passengerResult.error) {
@@ -297,9 +313,9 @@ async function joinRide(rideId, userId) {
 
   const rideResult = await sb
     .from("rides")
-    .update({ seats: ride.seats - 1, updated_at: now() })
+    .update({ seats: ride.seats - seatsJoining, updated_at: now() })
     .eq("id", rideId)
-    .gte("seats", 1)
+    .gte("seats", seatsJoining)
     .select("id")
     .maybeSingle();
 
@@ -333,16 +349,18 @@ async function leaveRide(rideId, userId) {
       .delete()
       .eq("ride_id", rideId)
       .eq("user_id", userId)
-      .select("id")
+      .select("id, party_size")
   );
   if (!removed.length) {
     throw new Error("You are not a passenger on that ride.");
   }
 
+  const seatsReleased = Math.max(1, Number(removed[0].party_size) || 1);
+
   throwIfError(
     await sb
       .from("rides")
-      .update({ seats: ride.seats + 1, updated_at: now() })
+      .update({ seats: ride.seats + seatsReleased, updated_at: now() })
       .eq("id", rideId)
   );
 }
