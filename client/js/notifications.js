@@ -1,3 +1,6 @@
+const ALERT_AUTO_DISMISS_MS = 5000;
+const notificationItemTimers = new WeakMap();
+
 async function loadNotifications() {
   try {
     return await ShareTripApi.apiFetch("/api/notifications");
@@ -6,15 +9,43 @@ async function loadNotifications() {
   }
 }
 
-function syncHeaderOffset(container) {
-  const bannerHeight =
-    container && !container.hidden && container.querySelector(".notification-item")
-      ? container.offsetHeight
-      : 0;
-  document.documentElement.style.setProperty(
-    "--notification-banner-height",
-    `${bannerHeight}px`
-  );
+function syncSiteHeaderOffset() {
+  window.ShareTripUtils?.syncSiteHeaderOffset?.();
+}
+
+function clearNotificationItemTimer(itemEl) {
+  const timer = notificationItemTimers.get(itemEl);
+  if (timer) {
+    clearTimeout(timer);
+    notificationItemTimers.delete(itemEl);
+  }
+}
+
+async function dismissNotificationItem(container, itemEl) {
+  if (!itemEl || itemEl.classList.contains("is-fading")) {
+    return;
+  }
+
+  clearNotificationItemTimer(itemEl);
+
+  const { fadeOutElement } = window.ShareTripUtils;
+  fadeOutElement(itemEl, async () => {
+    const id = Number(itemEl.dataset.id);
+    try {
+      await ShareTripApi.apiFetch("/api/notifications/read", {
+        method: "POST",
+        body: JSON.stringify({ ids: [id] }),
+      });
+    } catch {
+      // Still remove the banner item if marking read fails.
+    }
+
+    itemEl.remove();
+    if (!container.querySelector(".notification-item")) {
+      container.hidden = true;
+    }
+    syncSiteHeaderOffset();
+  });
 }
 
 function renderNotificationBanner(container, notifications) {
@@ -22,7 +53,7 @@ function renderNotificationBanner(container, notifications) {
     if (container) {
       container.hidden = true;
       container.innerHTML = "";
-      syncHeaderOffset(container);
+      syncSiteHeaderOffset();
     }
     return;
   }
@@ -33,28 +64,27 @@ function renderNotificationBanner(container, notifications) {
       (item) => `
     <div class="notification-item ${item.kind === "driver_offer_accepted" ? "success" : item.kind === "driver_offer_declined" ? "error" : ""}" data-id="${item.id}">
       <p>${escapeHtml(item.message)}</p>
-      <button type="button" class="notification-dismiss" data-dismiss-id="${item.id}">Dismiss</button>
+      <button type="button" class="notification-dismiss" data-dismiss-id="${item.id}" aria-label="Dismiss notification">&times;</button>
     </div>`
     )
     .join("");
 
   container.hidden = false;
   container.innerHTML = items;
-  syncHeaderOffset(container);
+  syncSiteHeaderOffset();
 
-  container.querySelectorAll("[data-dismiss-id]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const id = Number(button.dataset.dismissId);
-      await ShareTripApi.apiFetch("/api/notifications/read", {
-        method: "POST",
-        body: JSON.stringify({ ids: [id] }),
-      });
-      button.closest(".notification-item")?.remove();
-      if (!container.querySelector(".notification-item")) {
-        container.hidden = true;
-      }
-      syncHeaderOffset(container);
+  container.querySelectorAll(".notification-item").forEach((itemEl) => {
+    const dismissButton = itemEl.querySelector("[data-dismiss-id]");
+    dismissButton?.addEventListener("click", () => {
+      dismissNotificationItem(container, itemEl);
     });
+
+    notificationItemTimers.set(
+      itemEl,
+      setTimeout(() => {
+        dismissNotificationItem(container, itemEl);
+      }, ALERT_AUTO_DISMISS_MS)
+    );
   });
 }
 
@@ -68,11 +98,12 @@ async function showNotificationBanner() {
 }
 
 window.addEventListener("resize", () => {
-  syncHeaderOffset(document.getElementById("notification-banner"));
+  syncSiteHeaderOffset();
 });
 
 window.ShareTripNotifications = {
   loadNotifications,
   showNotificationBanner,
   renderNotificationBanner,
+  syncSiteHeaderOffset,
 };

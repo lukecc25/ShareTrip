@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS passengers (
     ride_id INTEGER NOT NULL,
     user_id TEXT NOT NULL,
     party_size INTEGER NOT NULL DEFAULT 1 CHECK (party_size >= 1),
+    guest_details TEXT NOT NULL DEFAULT '[]',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (ride_id, user_id),
     FOREIGN KEY (ride_id) REFERENCES rides(id) ON DELETE CASCADE,

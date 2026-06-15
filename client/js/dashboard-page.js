@@ -437,14 +437,14 @@ function updateStaticChrome() {
   }
 
   const messageEl = document.getElementById("dashboard-message");
-  if (state.message) {
-    messageEl.hidden = false;
-    messageEl.textContent = state.message;
-    messageEl.classList.toggle("error", state.messageType === "error");
-  } else {
-    messageEl.hidden = true;
-    messageEl.textContent = "";
-    messageEl.classList.remove("error");
+  if (messageEl) {
+    u().renderSiteAlert(messageEl, state.message, {
+      type: state.messageType,
+      onDismiss: () => {
+        state.message = "";
+        state.messageType = "success";
+      },
+    });
   }
 }
 
@@ -731,13 +731,13 @@ function bindRideActions() {
           return;
         }
         if (action === "join") {
-          const partySize = await u().promptJoinPartySize(button.dataset.remainingSeats);
-          if (!partySize) {
+          const joinDetails = await u().promptJoinPartySize(button.dataset.remainingSeats);
+          if (!joinDetails) {
             return;
           }
           await ShareTripApi.apiFetch(`/api/rides/${rideId}/join`, {
             method: "POST",
-            body: JSON.stringify({ partySize }),
+            body: JSON.stringify(joinDetails),
           });
           window.location.href = "/dashboard.html?joined=1";
         } else if (action === "leave") {

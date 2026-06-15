@@ -579,9 +579,7 @@ function renderProfilePage(data) {
 
 function showMessage(text, type = "success") {
   const message = document.getElementById("profile-message");
-  message.textContent = text;
-  message.className = `dashboard-message${type === "error" ? " error" : ""}`;
-  message.hidden = !text;
+  u().renderSiteAlert(message, text, { type });
 }
 
 function render() {

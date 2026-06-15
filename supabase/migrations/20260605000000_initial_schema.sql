@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS passengers (
     ride_id BIGINT NOT NULL REFERENCES rides(id) ON DELETE CASCADE,
     user_id TEXT NOT NULL REFERENCES accounts(id),
     party_size INTEGER NOT NULL DEFAULT 1 CHECK (party_size >= 1),
+    guest_details JSONB NOT NULL DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (ride_id, user_id)
 );
