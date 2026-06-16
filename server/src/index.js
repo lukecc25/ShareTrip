@@ -14,6 +14,7 @@ const HTML_PAGES = [
   "index.html",
   "sign-in.html",
   "sign-up.html",
+  "how-it-works.html",
   "dashboard.html",
   "my-profile.html",
   "profile.html",

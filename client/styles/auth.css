@@ -117,6 +117,26 @@ body.auth-body::before {
     background: #1d4ed8;
 }
 
+.auth-secondary-button {
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+    padding: 13px;
+    border: 1px solid #2563eb;
+    border-radius: 6px;
+    color: #2563eb;
+    background: #fff;
+    font: inherit;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+}
+
+.auth-secondary-button:hover {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
 .message {
     text-align: center;
     color: #166534;

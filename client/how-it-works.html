@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How It Works | ShareTrip</title>
+  <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/style.css">
+</head>
+<body>
+  <div id="navbar-root"></div>
+
+  <main class="info-page">
+    <section class="info-hero">
+      <p class="section-eyebrow">ShareTrip Guide</p>
+      <h1>How It Works</h1>
+      <p>ShareTrip helps drivers and passengers connect for shared rides. The website provides the ride board and coordination tools, but each trip still depends on clear communication and good judgment between people.</p>
+    </section>
+
+    <section class="info-grid" aria-label="Creating rides and requests">
+      <article class="info-card">
+        <span class="step-label">For Drivers</span>
+        <h2>Create a Ride Offer</h2>
+        <ol>
+          <li>Go to the ride board and choose to create a ride.</li>
+          <li>Enter your starting location, destination, travel date, and departure time.</li>
+          <li>Add the number of available seats and any helpful details passengers should know.</li>
+          <li>Review passenger requests and communicate clearly before confirming plans.</li>
+        </ol>
+      </article>
+
+      <article class="info-card">
+        <span class="step-label">For Passengers</span>
+        <h2>Create a Ride Request</h2>
+        <ol>
+          <li>Go to the ride board and choose to create a ride request.</li>
+          <li>Share where you need to be picked up, where you are going, and when you hope to travel.</li>
+          <li>Include the number of passengers and any important timing or luggage details.</li>
+          <li>Watch for driver offers and confirm the final plan directly with the driver.</li>
+        </ol>
+      </article>
+    </section>
+
+    <section class="trust-section">
+      <div>
+        <p class="section-eyebrow">Money and Trust</p>
+        <h2>Payment Is Handled Outside ShareTrip</h2>
+        <p>ShareTrip does not collect money, process payments, hold deposits, or manage reimbursements. Drivers and passengers are responsible for making their own arrangements for gas money, shared costs, or any other payment details.</p>
+        <p>Because those arrangements happen between people, every trip is based on trust. Agree on expectations before the ride begins, including cost, pickup location, timing, route, and contact information.</p>
+      </div>
+    </section>
+
+    <section class="safety-section" aria-labelledby="safety-title">
+      <div class="safety-heading">
+        <p class="section-eyebrow">Stay Cautious</p>
+        <h2 id="safety-title">Connect Carefully</h2>
+      </div>
+      <div class="safety-list">
+        <article>
+          <h3>Verify Details</h3>
+          <p>Confirm the driver's name, passenger names, destination, pickup spot, departure time, and cost arrangement before meeting.</p>
+        </article>
+        <article>
+          <h3>Meet Wisely</h3>
+          <p>Use public, well-lit locations when possible and let someone you trust know your travel plans.</p>
+        </article>
+        <article>
+          <h3>Trust Your Judgment</h3>
+          <p>If something feels unclear or uncomfortable, pause the plan, ask more questions, or choose not to ride.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script>
+    (async () => {
+      await ShareTripNavbar.renderNavbar("how-it-works");
+    })();
+  </script>
+</body>
+</html>
