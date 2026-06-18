@@ -196,6 +196,30 @@ function rideMatchesLocationSearch(ride, query) {
   return stateSources.some((state) => destinationStateMatches(state, q));
 }
 
+
+
+// Builds a plain vehicle-info object from an account row, or null if the
+// driver hasn't filled in any vehicle details yet.
+function buildVehicleInfo(account) {
+  if (!account) {
+    return null;
+  }
+  const hasAnyDetail =
+    account.car_make_model ||
+    account.car_color ||
+    account.car_seat_capacity ||
+    account.license_plate_partial;
+  if (!hasAnyDetail) {
+    return null;
+  }
+  return {
+    car_make_model: account.car_make_model || null,
+    car_color: account.car_color || null,
+    car_seat_capacity: account.car_seat_capacity || null,
+    license_plate_partial: account.license_plate_partial || null,
+  };
+}
+
 async function getProfile(userId) {
   return authService.getAccountById(userId);
 }
@@ -940,6 +964,35 @@ async function getRideDetail(rideId, currentUserId) {
     }
   }
 
+  // The actual driver depends on ride type: for an offer, the owner drives.
+  // For a request, it's whoever has been accepted via assigned_driver_id.
+  const driverId = ride.ride_type === "offer" ? ride.owner_id : ride.assigned_driver_id;
+  const driverAccount = driverId ? findAccount(store, driverId) : null;
+  const vehicleInfo = buildVehicleInfo(driverAccount);
+
+  const isRideParticipant = Boolean(
+    currentUserId &&
+      (currentUserId === ride.owner_id ||
+        currentUserId === driverId ||
+        store.passengers.some(
+          (p) => Number(p.ride_id) === Number(rideId) && p.user_id === currentUserId
+        ))
+  );
+  const rideDayArrived = ride.start_date <= today();
+
+  // Vehicle details are only revealed to people on this ride, and only once
+  // the ride day has arrived. The driver can always see their own car.
+  let driverVehicleStatus = "unavailable";
+  let driverVehicle = null;
+  if (vehicleInfo && isRideParticipant) {
+    if (currentUserId === driverId || rideDayArrived) {
+      driverVehicleStatus = "visible";
+      driverVehicle = vehicleInfo;
+    } else {
+      driverVehicleStatus = "pending";
+    }
+  }
+
   return {
     ride: {
       ...ride,
@@ -955,6 +1008,7 @@ async function getRideDetail(rideId, currentUserId) {
     comments,
     pending_driver_offers,
     assigned_driver,
+    driver_vehicle: { status: driverVehicleStatus, info: driverVehicle },
   };
 }
 

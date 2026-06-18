@@ -11,6 +11,7 @@ let state = {
   photoEditorSettings: null,
   viewingUserId: null,
   isOwnProfile: true,
+  pendingAbleDriver: false,
 };
 
 const PHOTO_EDITOR = {
@@ -509,7 +510,8 @@ function renderProfileHero(data) {
 
 function renderProfileEditForm(profile) {
   const { escapeHtml } = u();
-
+  const isAbleDriver = u().isAbleDriver(profile) || state.pendingAbleDriver;  
+  
   return `
     <section class="profile-hero profile-hero-edit">
       ${renderAvatar(profile, { editable: true })}
@@ -535,9 +537,33 @@ function renderProfileEditForm(profile) {
         <label for="edit-email">Email</label>
         <input id="edit-email" name="email" type="email" value="${escapeHtml(profile.email || "")}" required>
         <label class="able-driver-toggle profile-edit-toggle">
-          <input type="checkbox" name="able_driver" ${u().isAbleDriver(profile) ? "checked" : ""}>
+          <input type="checkbox" name="able_driver" ${isAbleDriver ? "checked" : ""}>
           <span>Available to drive</span>
         </label>
+        <div class="vehicle-details-section" id="vehicleDetailsSection" ${isAbleDriver ? "" : "hidden"}>
+          <h3>Vehicle details</h3>
+          <p class="vehicle-details-hint">Riders only see this once the ride day arrives.</p>
+          <div class="form-row">
+            <div>
+              <label for="edit-car-make-model">Make &amp; model</label>
+              <input id="edit-car-make-model" name="car_make_model" type="text" maxlength="100" value="${escapeHtml(profile.car_make_model || "")}" placeholder="e.g. Toyota Prius">
+            </div>
+            <div>
+              <label for="edit-car-color">Color</label>
+              <input id="edit-car-color" name="car_color" type="text" maxlength="40" value="${escapeHtml(profile.car_color || "")}" placeholder="e.g. Silver">
+            </div>
+          </div>
+          <div class="form-row">
+            <div>
+              <label for="edit-car-seat-capacity">Seat capacity</label>
+              <input id="edit-car-seat-capacity" name="car_seat_capacity" type="number" min="1" max="15" step="1" value="${escapeHtml(profile.car_seat_capacity)}">
+            </div>
+            <div>
+              <label for="edit-license-plate-partial">License plate (last 4 digits only)</label>
+              <input id="edit-license-plate-partial" name="license_plate_partial" type="text" maxlength="8" value="${escapeHtml(profile.license_plate_partial || "")}" placeholder="e.g. 4821">
+            </div>
+          </div>
+        </div>
         <div class="profile-edit-actions">
           <button type="submit" class="primary-small-button">Save changes</button>
           <button type="button" class="secondary-button" data-action="cancel-edit">Cancel</button>
@@ -762,6 +788,7 @@ function bindProfileEvents() {
       state.editProfilePicture = undefined;
       state.profilePhotoSource = null;
       state.photoEditorSettings = null;
+      state.pendingAbleDriver = false;
       showMessage("");
       render();
     });
@@ -770,6 +797,31 @@ function bindProfileEvents() {
   const ableDriverToggle = root.querySelector('[data-action="toggle-able-driver"]');
   if (ableDriverToggle) {
     ableDriverToggle.addEventListener("change", async () => {
+      const profile = state.data.profile;
+      const missingVehicleDetails =
+        ableDriverToggle.checked &&
+        (!profile.car_make_model ||
+          !profile.car_color ||
+          !profile.car_seat_capacity ||
+          !profile.license_plate_partial);
+
+      if (missingVehicleDetails) {
+        ableDriverToggle.checked = false;
+        const shouldEdit = window.confirm(
+          "You need to add your vehicle details before you can be available to drive. Enter vehicle details now?"
+        );
+        if (shouldEdit) {
+          state.pendingAbleDriver = true;
+          state.editing = true;
+          state.editProfilePicture = undefined;
+          state.profilePhotoSource = null;
+          state.photoEditorSettings = null;
+          showMessage("");
+          render();
+        }
+        return;
+      }
+
       try {
         const updated = await ShareTripApi.apiFetch("/api/users/me/profile", {
           method: "PUT",
@@ -834,9 +886,34 @@ function bindProfileEvents() {
 
   const form = document.getElementById("profileEditForm");
   if (form) {
+    const ableDriverFormCheckbox = form.querySelector('input[name="able_driver"]');
+    const vehicleSection = document.getElementById("vehicleDetailsSection");
+    if (ableDriverFormCheckbox && vehicleSection) {
+      ableDriverFormCheckbox.addEventListener("change", () => {
+        vehicleSection.hidden = !ableDriverFormCheckbox.checked;
+      });
+    }
+
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const formData = new FormData(form);
+
+      const wantsToBeDriver = formData.get("able_driver") === "on";
+      const carMakeModel = (formData.get("car_make_model") || "").trim();
+      const carColor = (formData.get("car_color") || "").trim();
+      const carSeatCapacity = formData.get("car_seat_capacity");
+      const licensePlatePartial = (formData.get("license_plate_partial") || "").trim();
+
+      if (
+        wantsToBeDriver &&
+        (!carMakeModel || !carColor || !carSeatCapacity || !licensePlatePartial)
+      ) {
+        showMessage(
+          "To be available to drive, please fill in all vehicle details (make & model, color, seat capacity, and license plate).",
+          "error"
+        );
+        return;
+      }
 
       try {
         const payload = {
@@ -846,6 +923,10 @@ function bindProfileEvents() {
           phone: formData.get("phone"),
           gender: state.data.profile.gender,
           able_driver: formData.get("able_driver") === "on",
+          car_make_model: formData.get("car_make_model"),
+          car_color: formData.get("car_color"),
+          car_seat_capacity: formData.get("car_seat_capacity") || null,
+          license_plate_partial: formData.get("license_plate_partial"),
         };
         if (state.editProfilePicture !== undefined) {
           payload.profile_picture_url = state.editProfilePicture;
@@ -862,6 +943,7 @@ function bindProfileEvents() {
         state.editProfilePicture = undefined;
         state.profilePhotoSource = null;
         state.photoEditorSettings = null;
+        state.pendingAbleDriver = false;
         showMessage("Profile updated.");
         render();
       } catch (error) {

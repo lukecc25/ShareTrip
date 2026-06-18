@@ -330,6 +330,7 @@ function render() {
         </div>
         ${actions ? `<div class="detail-actions">${actions}</div>` : ""}
       </article>
+      ${renderVehicleSection(detail)}
       ${renderDriverOffersPanel(detail)}
       ${
         isOffer
@@ -363,6 +364,50 @@ function render() {
   bindEvents(ride.id);
   updatePageMessage();
 }
+
+
+function renderVehicleSection(detail) {
+  const vehicle = detail.driver_vehicle;
+  if (!vehicle || vehicle.status === "unavailable") {
+    return "";
+  }
+ 
+  if (vehicle.status === "pending") {
+    return `
+      <section class="detail-card detail-section vehicle-section">
+        <div class="section-heading"><h2>Vehicle details</h2></div>
+        <p class="vehicle-pending-note">Vehicle details will appear here once the ride day arrives.</p>
+      </section>`;
+  }
+ 
+  const { escapeHtml } = u();
+  const info = vehicle.info || {};
+  const rows = [];
+ 
+  if (info.car_make_model) {
+    rows.push(`<div><span>Make &amp; model</span><strong>${escapeHtml(info.car_make_model)}</strong></div>`);
+  }
+  if (info.car_color) {
+    rows.push(`<div><span>Color</span><strong>${escapeHtml(info.car_color)}</strong></div>`);
+  }
+  if (info.car_seat_capacity) {
+    rows.push(`<div><span>Seat capacity</span><strong>${escapeHtml(info.car_seat_capacity)}</strong></div>`);
+  }
+  if (info.license_plate_partial) {
+    rows.push(`<div><span>Plate ends with</span><strong>${escapeHtml(info.license_plate_partial)}</strong></div>`);
+  }
+ 
+  if (!rows.length) {
+    return "";
+  }
+ 
+  return `
+    <section class="detail-card detail-section vehicle-section">
+      <div class="section-heading"><h2>Vehicle details</h2></div>
+      <div class="vehicle-details-grid">${rows.join("")}</div>
+    </section>`;
+}
+ 
 
 function bindEvents(rideId) {
   document.querySelectorAll("[data-action]").forEach((button) => {
