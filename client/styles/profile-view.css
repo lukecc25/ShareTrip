@@ -521,3 +521,25 @@
         justify-content: center;
     }
 }
+
+.vehicle-details-section {
+    border-top: 1px solid #e2e8f0;
+    margin-top: 4px;
+    margin-bottom: 16px;
+    padding-top: 16px;
+}
+ 
+.vehicle-details-section h3 {
+    color: #0f172a;
+    font-size: 16px;
+    margin-bottom: 6px;
+}
+ 
+.vehicle-details-hint {
+    color: #64748b;
+    font-size: 13px;
+    margin-bottom: 14px;
+}
+
+
+ 
