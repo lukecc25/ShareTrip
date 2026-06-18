@@ -10,17 +10,31 @@ async function renderNavbar(active = "") {
         <img src="/images/sharetrip_logo.webp" alt="ShareTrip Logo">
         <div class="logo-text">Share<span>Trip</span></div>
       </a>
-      <div id="nav-actions" class="nav-actions"></div>
+      <button id="nav-menu-toggle" class="nav-menu-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <div id="nav-menu" class="nav-menu">
+        <div id="nav-primary" class="nav-primary"></div>
+        <div id="nav-account" class="nav-account"></div>
+      </div>
     </nav>
   `;
 
-  const container = document.getElementById("nav-actions");
-  if (!container || !window.ShareTripAuth) {
+  renderFooter();
+
+  setupMenuToggle();
+
+  const primaryContainer = document.getElementById("nav-primary");
+  const accountContainer = document.getElementById("nav-account");
+  if (!primaryContainer || !accountContainer || !window.ShareTripAuth) {
     return;
   }
 
   const session = await ShareTripAuth.getSession();
-  container.innerHTML = "";
+  primaryContainer.innerHTML = "";
+  accountContainer.innerHTML = "";
 
   if (session.isAuthenticated) {
     let profile = null;
@@ -34,6 +48,11 @@ async function renderNavbar(active = "") {
     dashboardLink.href = "/dashboard.html";
     dashboardLink.className = `nav-link${active === "dashboard" ? " active" : ""}`;
     dashboardLink.textContent = "Dashboard";
+
+    const howItWorksLink = document.createElement("a");
+    howItWorksLink.href = "/how-it-works.html";
+    howItWorksLink.className = `nav-link${active === "how-it-works" ? " active" : ""}`;
+    howItWorksLink.textContent = "How It Works";
 
     const donationLink = document.createElement("a");
     donationLink.href = "/donations.html";
@@ -59,11 +78,7 @@ async function renderNavbar(active = "") {
       showNavInitials(profileAvatar, profile);
     }
 
-    const profileLabel = document.createElement("span");
-    profileLabel.textContent = "Profile";
-
     profileLink.appendChild(profileAvatar);
-    profileLink.appendChild(profileLabel);
 
     const logoutBtn = document.createElement("button");
     logoutBtn.type = "button";
@@ -71,18 +86,55 @@ async function renderNavbar(active = "") {
     logoutBtn.textContent = "Logout";
     logoutBtn.addEventListener("click", () => ShareTripAuth.logout());
 
-    container.appendChild(dashboardLink);
-    container.appendChild(profileLink);
-    container.appendChild(donationLink);
-    container.appendChild(logoutBtn);
+    primaryContainer.appendChild(howItWorksLink);
+    primaryContainer.appendChild(dashboardLink);
+    primaryContainer.appendChild(donationLink);
+    accountContainer.appendChild(profileLink);
+    accountContainer.appendChild(logoutBtn);
     return;
   }
+
+  const howItWorksLink = document.createElement("a");
+  howItWorksLink.href = "/how-it-works.html";
+  howItWorksLink.className = `nav-link${active === "how-it-works" ? " active" : ""}`;
+  howItWorksLink.textContent = "How It Works";
 
   const loginLink = document.createElement("a");
   loginLink.href = "/sign-in.html";
   loginLink.className = "login-btn";
   loginLink.textContent = "Login / Sign Up";
-  container.appendChild(loginLink);
+  primaryContainer.appendChild(howItWorksLink);
+  accountContainer.appendChild(loginLink);
+}
+
+function setupMenuToggle() {
+  const toggle = document.getElementById("nav-menu-toggle");
+  const menu = document.getElementById("nav-menu");
+
+  if (!toggle || !menu) {
+    return;
+  }
+
+  toggle.addEventListener("click", () => {
+    const isOpen = menu.classList.toggle("open");
+    toggle.classList.toggle("open", isOpen);
+    toggle.setAttribute("aria-expanded", String(isOpen));
+    toggle.setAttribute("aria-label", isOpen ? "Close navigation menu" : "Open navigation menu");
+  });
+}
+
+function renderFooter() {
+  let footer = document.getElementById("site-footer");
+  const year = new Date().getFullYear();
+
+  if (!footer) {
+    footer = document.createElement("footer");
+    footer.id = "site-footer";
+    footer.className = "site-footer";
+    document.body.appendChild(footer);
+  }
+
+  footer.innerHTML = `<p>&copy; ${year} ShareTrip. All rights reserved.</p>`;
 }
 
 function genderClass(gender) {
