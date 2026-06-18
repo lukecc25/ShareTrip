@@ -112,6 +112,14 @@ body {
     white-space: nowrap;
 }
 
+.nav-mobile-profile-link {
+    display: none;
+}
+
+.nav-mobile-actions {
+    display: none;
+}
+
 .nav-menu-toggle {
     align-items: center;
     background: white;
@@ -338,6 +346,19 @@ body {
     line-height: 1.55;
 }
 
+.feature-link {
+    color: #2563eb;
+    display: inline-block;
+    font-weight: 800;
+    margin-top: 14px;
+    text-decoration: none;
+}
+
+.feature-link:hover {
+    color: #1d4ed8;
+    text-decoration: underline;
+}
+
 .testimonials-section {
     background: white;
     padding: 70px 24px;
@@ -526,6 +547,19 @@ body {
         display: flex;
     }
 
+    .nav-mobile-actions {
+        align-items: center;
+        display: flex;
+        gap: 12px;
+        grid-column: 2;
+        justify-self: end;
+    }
+
+    .nav-mobile-profile {
+        align-items: center;
+        display: flex;
+    }
+
     .nav-menu {
         align-items: stretch;
         background: white;
@@ -545,8 +579,7 @@ body {
         display: grid;
     }
 
-    .nav-primary,
-    .nav-account {
+    .nav-primary {
         align-items: stretch;
         display: grid;
         gap: 12px;
@@ -554,16 +587,33 @@ body {
         justify-content: stretch;
     }
 
+    .nav-account {
+        align-items: center;
+        display: flex;
+        gap: 12px;
+        grid-column: auto;
+        justify-content: flex-start;
+    }
+
     .nav-link {
         font-size: 14px;
         padding: 8px 0;
+    }
+
+    .nav-mobile-profile-link {
+        display: block;
     }
 
     .nav-profile-link {
         align-items: center;
         flex-direction: row;
         justify-content: flex-start;
-        min-width: 60px;
+        min-width: 0;
+        padding: 0;
+    }
+
+    .nav-account .nav-profile-link {
+        display: none;
     }
 
     .nav-profile-avatar {
