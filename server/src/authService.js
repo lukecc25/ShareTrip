@@ -12,11 +12,23 @@ const PUBLIC_FIELDS = [
   "gender",
   "able_driver",
   "profile_picture_url",
+  "car_make_model",
+  "car_color",
+  "car_seat_capacity",
+  "license_plate_partial",
   "created_at",
   "updated_at",
 ];
 
 const MAX_PROFILE_PICTURE_LENGTH = 500000;
+
+// Vehicle field limits. The license plate is intentionally short - only
+// the last few characters should ever be collected, never the full plate.
+const MAX_CAR_MAKE_MODEL_LENGTH = 100;
+const MAX_CAR_COLOR_LENGTH = 40;
+const MAX_LICENSE_PLATE_PARTIAL_LENGTH = 8;
+const MIN_CAR_SEAT_CAPACITY = 1;
+const MAX_CAR_SEAT_CAPACITY = 15;
 
 function normalizeProfilePictureUrl(value) {
   if (value === null || value === undefined || value === "") {
@@ -37,6 +49,52 @@ function normalizeProfilePictureUrl(value) {
     throw new Error("Profile picture is too large. Use a smaller image.");
   }
   return value;
+}
+
+// Generic short text field for vehicle details (make/model, color).
+// Returns null for empty input so the column can be cleared.
+function normalizeVehicleText(value, maxLength) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  if (typeof value !== "string") {
+    throw new Error("Invalid vehicle field.");
+  }
+  const trimmed = value.trim();
+  return trimmed ? trimmed.slice(0, maxLength) : null;
+}
+
+function normalizeCarSeatCapacity(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  const parsed = Number(value);
+  if (
+    !Number.isInteger(parsed) ||
+    parsed < MIN_CAR_SEAT_CAPACITY ||
+    parsed > MAX_CAR_SEAT_CAPACITY
+  ) {
+    throw new Error(
+      `Seat capacity must be a whole number between ${MIN_CAR_SEAT_CAPACITY} and ${MAX_CAR_SEAT_CAPACITY}.`
+    );
+  }
+  return parsed;
+}
+
+function normalizeLicensePlatePartial(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  if (typeof value !== "string") {
+    throw new Error("Invalid license plate value.");
+  }
+  const trimmed = value.trim().toUpperCase();
+  if (trimmed.length > MAX_LICENSE_PLATE_PARTIAL_LENGTH) {
+    throw new Error(
+      `Enter only the last ${MAX_LICENSE_PLATE_PARTIAL_LENGTH} characters of the license plate, not the full plate number.`
+    );
+  }
+  return trimmed || null;
 }
 
 function pickPublic(account) {
@@ -148,8 +206,37 @@ async function updateAccount(id, data) {
     gender: data.gender,
     able_driver:
       data.able_driver !== undefined ? Boolean(data.able_driver) : Boolean(normalized.able_driver),
+    car_make_model:
+      data.car_make_model !== undefined
+        ? normalizeVehicleText(data.car_make_model, MAX_CAR_MAKE_MODEL_LENGTH)
+        : normalized.car_make_model ?? null,
+    car_color:
+      data.car_color !== undefined
+        ? normalizeVehicleText(data.car_color, MAX_CAR_COLOR_LENGTH)
+        : normalized.car_color ?? null,
+    car_seat_capacity:
+      data.car_seat_capacity !== undefined
+        ? normalizeCarSeatCapacity(data.car_seat_capacity)
+        : normalized.car_seat_capacity ?? null,
+    license_plate_partial:
+      data.license_plate_partial !== undefined
+        ? normalizeLicensePlatePartial(data.license_plate_partial)
+        : normalized.license_plate_partial ?? null,
     updated_at: now(),
   };
+
+  if (payload.able_driver) {
+    const missingVehicleDetails =
+      !payload.car_make_model ||
+      !payload.car_color ||
+      !payload.car_seat_capacity ||
+      !payload.license_plate_partial;
+    if (missingVehicleDetails) {
+      throw new Error(
+        "Vehicle details (make/model, color, seat capacity, and license plate) are required before you can be available to drive."
+      );
+    }
+  }
 
   if ("profile_picture_url" in data) {
     payload.profile_picture_url = normalizeProfilePictureUrl(data.profile_picture_url);

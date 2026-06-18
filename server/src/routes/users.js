@@ -5,6 +5,21 @@ const ridesService = require("../ridesService");
 
 const router = express.Router();
 
+// Substrings used to tell validation errors (400) apart from unexpected
+// server errors (500). Keep these in sync with the messages thrown in
+// authService.js.
+const VALIDATION_ERROR_HINTS = [
+  "Profile picture",
+  "Seat capacity",
+  "license plate",
+  "vehicle field",
+  "available to drive",
+];
+
+function isValidationError(message) {
+  return VALIDATION_ERROR_HINTS.some((hint) => message.includes(hint));
+}
+
 router.get("/me/overview", requireApiAuth, async (req, res) => {
   try {
     const overview = await ridesService.getUserProfileOverview(req.userId);
@@ -43,6 +58,10 @@ router.put("/me/profile", requireApiAuth, async (req, res) => {
     email,
     able_driver: ableDriver,
     profile_picture_url: profilePictureUrl,
+    car_make_model: carMakeModel,
+    car_color: carColor,
+    car_seat_capacity: carSeatCapacity,
+    license_plate_partial: licensePlatePartial,
   } = req.body;
   if (!fname || !lname || !gender || !email) {
     res.status(400).json({
@@ -63,13 +82,17 @@ router.put("/me/profile", requireApiAuth, async (req, res) => {
       gender,
       email,
       able_driver: ableDriver,
+      car_make_model: carMakeModel,
+      car_color: carColor,
+      car_seat_capacity: carSeatCapacity,
+      license_plate_partial: licensePlatePartial,
       ...(Object.prototype.hasOwnProperty.call(req.body, "profile_picture_url")
         ? { profile_picture_url: profilePictureUrl }
         : {}),
     });
     res.json(profile);
   } catch (err) {
-    const status = err.message.includes("Profile picture") ? 400 : 500;
+    const status = isValidationError(err.message) ? 400 : 500;
     res.status(status).json({ error: err.message });
   }
 });
