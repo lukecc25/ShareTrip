@@ -83,6 +83,10 @@ body.donation-body {
     grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
 }
 
+.donation-grid .detail-card + .detail-card {
+    margin-top: 0;
+}
+
 .donation-form {
     display: grid;
     gap: 12px;

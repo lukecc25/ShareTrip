@@ -4,17 +4,22 @@ async function renderNavbar(active = "") {
     return;
   }
 
+  active = active || getActiveNavFromPath();
+
   host.innerHTML = `
     <nav class="navbar">
       <a href="/index.html" class="logo-area">
         <img src="/images/sharetrip_logo.webp" alt="ShareTrip Logo">
         <div class="logo-text">Share<span>Trip</span></div>
       </a>
-      <button id="nav-menu-toggle" class="nav-menu-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
+      <div class="nav-mobile-actions">
+        <div id="nav-mobile-profile" class="nav-mobile-profile"></div>
+        <button id="nav-menu-toggle" class="nav-menu-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
       <div id="nav-menu" class="nav-menu">
         <div id="nav-primary" class="nav-primary"></div>
         <div id="nav-account" class="nav-account"></div>
@@ -28,6 +33,7 @@ async function renderNavbar(active = "") {
 
   const primaryContainer = document.getElementById("nav-primary");
   const accountContainer = document.getElementById("nav-account");
+  const mobileProfileContainer = document.getElementById("nav-mobile-profile");
   if (!primaryContainer || !accountContainer || !window.ShareTripAuth) {
     return;
   }
@@ -35,6 +41,9 @@ async function renderNavbar(active = "") {
   const session = await ShareTripAuth.getSession();
   primaryContainer.innerHTML = "";
   accountContainer.innerHTML = "";
+  if (mobileProfileContainer) {
+    mobileProfileContainer.innerHTML = "";
+  }
 
   if (session.isAuthenticated) {
     let profile = null;
@@ -58,27 +67,14 @@ async function renderNavbar(active = "") {
     donationLink.href = "/donations.html";
     donationLink.className = `nav-link${active === "donations" ? " active" : ""}`;
     donationLink.textContent = "Donate";
-    const profileLink = document.createElement("a");
-    profileLink.href = "/my-profile.html";
-    profileLink.className = `nav-link nav-profile-link${active === "profile" ? " active" : ""}`;
 
-    const profileAvatar = document.createElement("span");
-    profileAvatar.className = "nav-profile-avatar";
+    const mobileProfileLink = document.createElement("a");
+    mobileProfileLink.href = "/my-profile.html";
+    mobileProfileLink.className = `nav-link nav-mobile-profile-link${active === "profile" ? " active" : ""}`;
+    mobileProfileLink.textContent = "Profile";
 
-    if (profile?.profile_picture_url) {
-      profileAvatar.classList.add("has-photo");
-      const avatarImage = document.createElement("img");
-      avatarImage.src = profile.profile_picture_url;
-      avatarImage.alt = `${profile.fname || "Profile"} avatar`;
-      avatarImage.addEventListener("error", () => {
-        showNavInitials(profileAvatar, profile);
-      });
-      profileAvatar.appendChild(avatarImage);
-    } else {
-      showNavInitials(profileAvatar, profile);
-    }
-
-    profileLink.appendChild(profileAvatar);
+    const profileLink = createProfileAvatarLink(profile, active);
+    const mobileProfileIconLink = createProfileAvatarLink(profile, active, " nav-mobile-profile-icon");
 
     const logoutBtn = document.createElement("button");
     logoutBtn.type = "button";
@@ -89,22 +85,45 @@ async function renderNavbar(active = "") {
     primaryContainer.appendChild(howItWorksLink);
     primaryContainer.appendChild(dashboardLink);
     primaryContainer.appendChild(donationLink);
+    primaryContainer.appendChild(mobileProfileLink);
     accountContainer.appendChild(profileLink);
     accountContainer.appendChild(logoutBtn);
+    if (mobileProfileContainer) {
+      mobileProfileContainer.appendChild(mobileProfileIconLink);
+    }
     return;
   }
-
-  const howItWorksLink = document.createElement("a");
-  howItWorksLink.href = "/how-it-works.html";
-  howItWorksLink.className = `nav-link${active === "how-it-works" ? " active" : ""}`;
-  howItWorksLink.textContent = "How It Works";
 
   const loginLink = document.createElement("a");
   loginLink.href = "/sign-in.html";
   loginLink.className = "login-btn";
   loginLink.textContent = "Login / Sign Up";
-  primaryContainer.appendChild(howItWorksLink);
   accountContainer.appendChild(loginLink);
+}
+
+function createProfileAvatarLink(profile, active, extraClass = "") {
+  const profileLink = document.createElement("a");
+  profileLink.href = "/my-profile.html";
+  profileLink.className = `nav-link nav-profile-link${extraClass}${active === "profile" ? " active" : ""}`;
+
+  const profileAvatar = document.createElement("span");
+  profileAvatar.className = "nav-profile-avatar";
+
+  if (profile?.profile_picture_url) {
+    profileAvatar.classList.add("has-photo");
+    const avatarImage = document.createElement("img");
+    avatarImage.src = profile.profile_picture_url;
+    avatarImage.alt = `${profile.fname || "Profile"} avatar`;
+    avatarImage.addEventListener("error", () => {
+      showNavInitials(profileAvatar, profile);
+    });
+    profileAvatar.appendChild(avatarImage);
+  } else {
+    showNavInitials(profileAvatar, profile);
+  }
+
+  profileLink.appendChild(profileAvatar);
+  return profileLink;
 }
 
 function setupMenuToggle() {
@@ -155,3 +174,25 @@ function getProfileInitials(profile) {
 }
 
 window.ShareTripNavbar = { renderNavbar };
+
+function getActiveNavFromPath() {
+  const path = window.location.pathname.replace(/\/$/, "");
+
+  if (path === "/dashboard" || path === "/dashboard.html" || path === "/ride-details" || path === "/ride-details.html") {
+    return "dashboard";
+  }
+
+  if (path === "/donations" || path === "/donations.html") {
+    return "donations";
+  }
+
+  if (path === "/how-it-works" || path === "/how-it-works.html") {
+    return "how-it-works";
+  }
+
+  if (path === "/my-profile" || path === "/my-profile.html" || path === "/profile" || path === "/profile.html") {
+    return "profile";
+  }
+
+  return "";
+}
