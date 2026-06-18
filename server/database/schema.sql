@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS rides (
     gender_preference TEXT NOT NULL DEFAULT 'No preference'
         CHECK (gender_preference IN ('Same gender only', 'No preference')),
     assigned_driver_id TEXT,
+    offer_pending INTEGER NOT NULL DEFAULT 0 CHECK (offer_pending IN (0, 1)),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (owner_id) REFERENCES accounts(id)

@@ -32,6 +32,7 @@ function normalizeRide(row) {
     roundtrip: row.roundtrip ? 1 : 0,
     ride_cost: Number(row.ride_cost),
     seats: Number(row.seats),
+    offer_pending: row.offer_pending ? 1 : 0,
   };
 }
 

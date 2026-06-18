@@ -408,6 +408,13 @@ body.donation-body {
     color: #b91c1c;
 }
 
+.notification-item.pending,
+.profile-notification-item.notification-item.pending {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1e3a8a;
+}
+
 .notification-item p {
     font-weight: 700;
     margin: 0;
@@ -701,6 +708,11 @@ body.donation-body {
 .ride-type.request {
     background: #dbeafe;
     color: #1e40af;
+}
+
+.ride-type.offer-pending {
+    background: #e0e7ff;
+    color: #3730a3;
 }
 
 .ride-time-status {

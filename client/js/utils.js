@@ -44,7 +44,10 @@ function formatRatingValue(rating) {
   return Number(rating).toFixed(1);
 }
 
-function rideTypeLabel(type) {
+function rideTypeLabel(type, ride = null) {
+  if (isOfferPendingRide(ride)) {
+    return "Offer Pending";
+  }
   const normalized = String(type || "").toLowerCase().trim();
   if (normalized === "offer" || normalized === "offering") {
     return "Offer";
@@ -53,6 +56,13 @@ function rideTypeLabel(type) {
     return "Request";
   }
   return type ? String(type).charAt(0).toUpperCase() + String(type).slice(1) : "";
+}
+
+function isOfferPendingRide(ride) {
+  return (
+    String(ride?.ride_type || "").toLowerCase() === "offer" &&
+    (ride?.offer_pending === 1 || ride?.offer_pending === true)
+  );
 }
 
 function fullName(person) {
@@ -115,6 +125,38 @@ function saveSameGenderOnlyPreference(enabled) {
 
 function readQuery() {
   return new URLSearchParams(window.location.search);
+}
+
+const FLASH_QUERY_KEYS = [
+  "created",
+  "updated",
+  "published",
+  "joined",
+  "left",
+  "canceled",
+  "commented",
+  "driver_pending",
+  "driver_offer_cancelled",
+  "offer_responded",
+];
+
+function stripFlashQueryParams(keys = FLASH_QUERY_KEYS) {
+  const url = new URL(window.location.href);
+  let changed = false;
+
+  for (const key of keys) {
+    if (url.searchParams.has(key)) {
+      url.searchParams.delete(key);
+      changed = true;
+    }
+  }
+
+  if (!changed) {
+    return;
+  }
+
+  const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+  window.history.replaceState({}, "", nextUrl);
 }
 
 function setQuery(params) {
@@ -416,6 +458,7 @@ window.ShareTripUtils = {
   formatCommentDate,
   formatRatingValue,
   rideTypeLabel,
+  isOfferPendingRide,
   fullName,
   routeIconSvg,
   ableDriverClass,
@@ -431,5 +474,6 @@ window.ShareTripUtils = {
   fadeOutElement,
   syncSiteHeaderOffset,
   readQuery,
+  stripFlashQueryParams,
   setQuery,
 };

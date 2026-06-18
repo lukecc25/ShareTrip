@@ -32,6 +32,15 @@ router.post("/:id/become-driver", requireApiAuth, async (req, res) => {
   }
 });
 
+router.post("/:id/cancel-driver-offer", requireApiAuth, async (req, res) => {
+  try {
+    const result = await ridesService.cancelDriverOffer(req.params.id, req.userId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 router.post(
   "/:id/driver-offers/:offerId/accept",
   requireApiAuth,
