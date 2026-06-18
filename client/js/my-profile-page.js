@@ -4,6 +4,7 @@ function u() {
 
 let state = {
   data: null,
+  notifications: [],
   editing: false,
   editProfilePicture: undefined,
   profilePhotoSource: null,
@@ -430,8 +431,12 @@ function renderReviewCard(review) {
 
 function renderTripCard(ride) {
   const { escapeHtml, formatDateValue, rideTypeLabel, routeIconSvg } = u();
-  const typeLabel = rideTypeLabel(ride.ride_type);
-  const typeClass = typeLabel === "Request" ? "request" : "offer";
+  const typeLabel = rideTypeLabel(ride.ride_type, ride);
+  const typeClass = u().isOfferPendingRide(ride)
+      ? "offer-pending"
+      : typeLabel === "Request"
+        ? "request"
+        : "offer";
 
   return `
     <article class="ride-card">
@@ -541,6 +546,75 @@ function renderProfileEditForm(profile) {
     </section>`;
 }
 
+function renderProfileNotification(item) {
+  const { escapeHtml, formatCommentDate } = u();
+  const typeClass =
+    item.kind === "driver_offer_accepted" || item.kind === "ride_joined"
+      ? "success"
+      : item.kind === "driver_offer_declined"
+        ? "error"
+        : item.kind === "driver_offer_pending"
+          ? "pending"
+          : "";
+  const readClass = item.read_flag ? "is-read" : "";
+  const routeLine =
+    item.ride_origin || item.ride_destination
+      ? `<p class="profile-notification-route">${escapeHtml(item.ride_origin || "Start")} → ${escapeHtml(item.ride_destination || "Destination")}</p>`
+      : "";
+  const respondActions =
+    item.can_respond === 1 || item.can_respond === true
+      ? `<div class="profile-notification-actions-row">
+          <button type="button" class="primary-small-button" data-action="accept-offer" data-ride-id="${item.ride_id}" data-offer-id="${item.offer_id}">Accept</button>
+          <button type="button" class="secondary-button" data-action="decline-offer" data-ride-id="${item.ride_id}" data-offer-id="${item.offer_id}">Decline</button>
+        </div>`
+      : "";
+
+  return `
+    <article class="profile-notification-item notification-item ${typeClass} ${readClass}" data-id="${item.id}">
+      <div class="profile-notification-body">
+        <p>${escapeHtml(item.message)}</p>
+        ${routeLine}
+        ${respondActions}
+        <div class="profile-notification-meta">
+          <span>${escapeHtml(formatCommentDate(item.created_at))}</span>
+          ${
+            item.ride_id
+              ? `<a href="/ride-details.html?ride=${item.ride_id}" class="profile-notification-link">View ride</a>`
+              : ""
+          }
+        </div>
+      </div>
+      <button type="button" class="notification-dismiss profile-notification-dismiss" data-dismiss-id="${item.id}" aria-label="Dismiss notification">&times;</button>
+    </article>`;
+}
+
+function renderNotificationsSection() {
+  const notifications = state.notifications;
+  const unreadCount = notifications.filter((item) => !item.read_flag).length;
+
+  const listHtml = notifications.length
+    ? `<div class="profile-notification-list">${notifications.map(renderProfileNotification).join("")}</div>`
+    : '<p class="profile-empty">No notifications yet. Ride updates and driver offers will appear here.</p>';
+
+  return `
+    <section class="profile-section" id="profile-notifications">
+      <div class="profile-section-header">
+        <h2>Notifications</h2>
+        <span>${notifications.length}</span>
+      </div>
+      ${
+        unreadCount > 0
+          ? `<div class="profile-notification-actions">
+              <button type="button" class="secondary-button" data-action="mark-all-notifications-read">
+                Mark all as read
+              </button>
+            </div>`
+          : ""
+      }
+      ${listHtml}
+    </section>`;
+}
+
 function renderProfilePage(data) {
   const { reviews, trip_history: tripHistory } = data;
 
@@ -558,6 +632,8 @@ function renderProfilePage(data) {
 
   const reviewsHeading = state.isOwnProfile ? "Reviews about you" : "Reviews";
   const tripsHeading = state.isOwnProfile ? "Trip history" : "Past trips";
+  const notificationsHtml =
+    state.isOwnProfile && !state.editing ? renderNotificationsSection() : "";
 
   return `
     ${heroHtml}
@@ -574,7 +650,8 @@ function renderProfilePage(data) {
         <span>${tripHistory.length}</span>
       </div>
       ${tripsHtml}
-    </section>`;
+    </section>
+    ${notificationsHtml}`;
 }
 
 function showMessage(text, type = "success") {
@@ -597,6 +674,74 @@ function bindProfileEvents() {
   }
 
   const root = document.getElementById("profile-root");
+
+  root.querySelectorAll("[data-dismiss-id]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const id = Number(button.dataset.dismissId);
+      try {
+        await ShareTripApi.apiFetch("/api/notifications/read", {
+          method: "POST",
+          body: JSON.stringify({ ids: [id] }),
+        });
+        state.notifications = state.notifications.map((item) =>
+          Number(item.id) === id ? { ...item, read_flag: 1 } : item
+        );
+        render();
+      } catch (error) {
+        showMessage(error.message || "Unable to dismiss notification.", "error");
+      }
+    });
+  });
+
+  const markAllBtn = root.querySelector('[data-action="mark-all-notifications-read"]');
+  if (markAllBtn) {
+    markAllBtn.addEventListener("click", async () => {
+      const unreadIds = state.notifications
+        .filter((item) => !item.read_flag)
+        .map((item) => item.id);
+      if (!unreadIds.length) {
+        return;
+      }
+      try {
+        await ShareTripApi.apiFetch("/api/notifications/read", {
+          method: "POST",
+          body: JSON.stringify({ ids: unreadIds }),
+        });
+        state.notifications = state.notifications.map((item) => ({
+          ...item,
+          read_flag: 1,
+        }));
+        render();
+      } catch (error) {
+        showMessage(error.message || "Unable to mark notifications as read.", "error");
+      }
+    });
+  }
+
+  root.querySelectorAll('[data-action="accept-offer"], [data-action="decline-offer"]').forEach(
+    (button) => {
+      button.addEventListener("click", async () => {
+        const rideId = button.dataset.rideId;
+        const offerId = button.dataset.offerId;
+        const accept = button.dataset.action === "accept-offer";
+        try {
+          await ShareTripApi.apiFetch(
+            `/api/rides/${rideId}/driver-offers/${offerId}/${accept ? "accept" : "decline"}`,
+            { method: "POST" }
+          );
+          await loadProfileNotifications();
+          showMessage(
+            accept
+              ? "Driver accepted. The offer is pending until they save trip details."
+              : "Driver offer declined."
+          );
+          render();
+        } catch (error) {
+          showMessage(error.message || "Unable to update driver offer.", "error");
+        }
+      });
+    }
+  );
 
   const editBtn = root.querySelector('[data-action="edit-profile"]');
   if (editBtn) {
@@ -726,6 +871,19 @@ function bindProfileEvents() {
   }
 }
 
+async function loadProfileNotifications() {
+  if (!state.isOwnProfile) {
+    state.notifications = [];
+    return;
+  }
+
+  try {
+    state.notifications = await ShareTripApi.apiFetch("/api/notifications?unread=0");
+  } catch {
+    state.notifications = [];
+  }
+}
+
 async function loadProfileOverview() {
   if (state.viewingUserId) {
     state.data = await ShareTripApi.apiFetch(
@@ -760,6 +918,9 @@ async function initMyProfilePage() {
 
   try {
     await loadProfileOverview();
+    if (state.isOwnProfile) {
+      await loadProfileNotifications();
+    }
     render();
   } catch (error) {
     showMessage(error.message || "Unable to load profile.", "error");

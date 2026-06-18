@@ -5,6 +5,7 @@ function u() {
 const MESSAGES = {
   created: "Your ride has been posted.",
   updated: "Your ride has been updated.",
+  published: "Your offer has been published on the ride board.",
   joined: "You joined the ride.",
   left: "You left the ride.",
   canceled: "Your ride has been canceled.",
@@ -46,6 +47,7 @@ function parseInitialState() {
 
   if (query.has("created")) showMessage("created");
   if (query.has("updated")) showMessage("updated");
+  if (query.has("published")) showMessage("published");
   if (query.has("joined")) showMessage("joined");
   if (query.has("left")) showMessage("left");
   if (query.has("canceled")) showMessage("canceled");
@@ -136,7 +138,7 @@ function renderRequestDriverActions(ride) {
 
   const status = ride.my_driver_offer_status;
   if (status === "pending") {
-    return '<span class="ride-status pending-badge">Pending</span>';
+    return `<button type="button" class="secondary-button cancel-pending-offer" data-action="cancel-driver-offer" data-ride-id="${ride.id}" data-offer-id="${ride.my_driver_offer_id}">Cancel pending</button>`;
   }
   if (status === "accepted") {
     return '<span class="ride-status">Accepted as driver</span>';
@@ -147,9 +149,14 @@ function renderRequestDriverActions(ride) {
 
 function renderRideCard(ride) {
   const { escapeHtml, formatDateValue, rideTypeLabel, routeIconSvg } = u();
-  const typeLabel = rideTypeLabel(ride.ride_type);
-  const typeClass = typeLabel === "Request" ? "request" : "offer";
-  const isOffer = typeLabel === "Offer";
+  const isOfferPending = u().isOfferPendingRide(ride);
+  const typeLabel = rideTypeLabel(ride.ride_type, ride);
+  const typeClass = isOfferPending
+    ? "offer-pending"
+    : typeLabel === "Request"
+      ? "request"
+      : "offer";
+  const isOffer = String(ride.ride_type || "").toLowerCase() === "offer";
   const isOwner = ride.is_owner === 1;
   const hasJoined = ride.current_user_joined === 1;
   const remainingSeats = ride.seats;
@@ -191,18 +198,22 @@ function renderRideCard(ride) {
   }</a>`;
 
   if (isOwner) {
+    const editLabel = isOfferPending ? "Complete offer" : "Edit";
     footer += `
       <div class="ride-owner-actions">
-        <a href="/dashboard.html?edit=${ride.id}&showForm=1&scope=${state.scope}#createRideForm" class="edit-ride-link">Edit</a>
+        <a href="/dashboard.html?edit=${ride.id}&showForm=1&scope=${state.scope}#createRideForm" class="edit-ride-link">${editLabel}</a>
         <button type="button" class="danger-button" data-action="cancel" data-ride-id="${ride.id}">Cancel Ride</button>
       </div>`;
+    if (isOfferPending) {
+      footer += '<span class="ride-status pending-badge">Awaiting driver details</span>';
+    }
   } else if (isOffer && hasJoined) {
     footer += `
       <div class="ride-owner-actions">
-        <span class="ride-status">Joined</span>
+        ${isOfferPending ? '<span class="ride-status pending-badge">Offer pending</span>' : '<span class="ride-status">Joined</span>'}
         <button type="button" class="secondary-button" data-action="leave" data-ride-id="${ride.id}">Leave Ride</button>
       </div>`;
-  } else if (isOffer && remainingSeats > 0) {
+  } else if (isOffer && !isOfferPending && remainingSeats > 0) {
     footer += `<button type="button" class="primary-small-button" data-action="join" data-ride-id="${ride.id}" data-remaining-seats="${remainingSeats}">Join Ride</button>`;
   } else if (isOffer) {
     footer += `<span class="ride-status full">Full</span>`;
@@ -219,8 +230,9 @@ function renderRideCard(ride) {
     ? '<span class="flexible-badge">Flexible</span>'
     : "";
 
-  const offerDetails = isOffer
-    ? `
+  const offerDetails =
+    isOffer && !isOfferPending
+      ? `
       <div>
         <span>Passenger Seats</span>
         <strong>${escapeHtml(remainingSeats)}/${escapeHtml(totalSeats)} Seats Available</strong>
@@ -229,14 +241,17 @@ function renderRideCard(ride) {
         <span>Cost</span>
         <strong>$${Number(splitCost).toFixed(2)} each</strong>
       </div>`
-    : "";
+      : isOfferPending
+        ? `<div><span>Status</span><strong>Driver completing offer details</strong></div>`
+        : "";
 
-  const priceBlock = isOffer
-    ? `<span class="ride-price">
+  const priceBlock =
+    isOffer && !isOfferPending
+      ? `<span class="ride-price">
         <strong>$${Number(splitCost).toFixed(2)}</strong>
         <small>$${Number(ride.ride_cost).toFixed(2)} total</small>
       </span>`
-    : "";
+      : "";
 
   return `
     <article class="ride-card ride-card--${typeClass}" id="ride-${ride.id}">
@@ -273,13 +288,20 @@ function renderRideCard(ride) {
 function renderRideForm(ride) {
   const { escapeHtml } = u();
   const isEdit = Boolean(ride);
+  const isPendingOffer = u().isOfferPendingRide(ride);
 
   return `
     <section class="ride-form-panel" id="createRideForm">
       <div class="form-panel-header">
         <div>
-          <h2>${isEdit ? "Edit Ride" : "Create a Ride"}</h2>
-          <p>${isEdit ? "Update the details for your posted ride." : "Post a new ride offer or request for other members to find."}</p>
+          <h2>${isPendingOffer ? "Complete Your Offer" : isEdit ? "Edit Ride" : "Create a Ride"}</h2>
+          <p>${
+            isPendingOffer
+              ? "Add seats, cost, and any other trip details. Saving will publish this offer on the ride board."
+              : isEdit
+                ? "Update the details for your posted ride."
+                : "Post a new ride offer or request for other members to find."
+          }</p>
         </div>
         <a href="${filterUrl(state.scope, state.search)}" class="cancel-form-link">Cancel</a>
       </div>
@@ -365,7 +387,9 @@ function renderRideForm(ride) {
             </select>
           </div>
         </div>
-        <button type="submit">${isEdit ? "Save Changes" : "Post Ride"}</button>
+        <button type="submit">${
+          isPendingOffer ? "Publish Offer" : isEdit ? "Save Changes" : "Post Ride"
+        }</button>
       </form>
     </section>
   `;
@@ -617,11 +641,14 @@ function bindFormEvents() {
 
     try {
       if (rideId) {
+        const wasPending = u().isOfferPendingRide(editingRide());
         await ShareTripApi.apiFetch(`/api/rides/${rideId}`, {
           method: "PUT",
           body: JSON.stringify(payload),
         });
-        window.location.href = "/dashboard.html?updated=1";
+        window.location.href = wasPending
+          ? `/dashboard.html?published=1&scope=${state.scope}`
+          : `/dashboard.html?updated=1&scope=${state.scope}`;
       } else {
         await ShareTripApi.apiFetch("/api/rides", {
           method: "POST",
@@ -712,6 +739,16 @@ function bindRideActions() {
             method: "POST",
           });
           window.location.href = `/dashboard.html?driver_pending=1&scope=${state.scope}`;
+          return;
+        }
+        if (action === "cancel-driver-offer") {
+          if (!window.confirm("Cancel your pending driver offer?")) {
+            return;
+          }
+          await ShareTripApi.apiFetch(`/api/rides/${rideId}/cancel-driver-offer`, {
+            method: "POST",
+          });
+          window.location.reload();
           return;
         }
         if (action === "accept-offer") {

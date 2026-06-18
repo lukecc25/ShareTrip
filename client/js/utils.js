@@ -44,7 +44,10 @@ function formatRatingValue(rating) {
   return Number(rating).toFixed(1);
 }
 
-function rideTypeLabel(type) {
+function rideTypeLabel(type, ride = null) {
+  if (isOfferPendingRide(ride)) {
+    return "Offer Pending";
+  }
   const normalized = String(type || "").toLowerCase().trim();
   if (normalized === "offer" || normalized === "offering") {
     return "Offer";
@@ -53,6 +56,13 @@ function rideTypeLabel(type) {
     return "Request";
   }
   return type ? String(type).charAt(0).toUpperCase() + String(type).slice(1) : "";
+}
+
+function isOfferPendingRide(ride) {
+  return (
+    String(ride?.ride_type || "").toLowerCase() === "offer" &&
+    (ride?.offer_pending === 1 || ride?.offer_pending === true)
+  );
 }
 
 function fullName(person) {
@@ -416,6 +426,7 @@ window.ShareTripUtils = {
   formatCommentDate,
   formatRatingValue,
   rideTypeLabel,
+  isOfferPendingRide,
   fullName,
   routeIconSvg,
   ableDriverClass,

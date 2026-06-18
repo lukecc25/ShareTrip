@@ -20,6 +20,13 @@ function findRide(store, id) {
   return store.rides.find((r) => Number(r.id) === Number(id)) || null;
 }
 
+function isOfferPending(ride) {
+  if (!ride || ride.ride_type !== "offer") {
+    return false;
+  }
+  return ride.offer_pending === true || ride.offer_pending === 1;
+}
+
 function passengerSeatsUsed(store, rideId) {
   return store.passengers
     .filter((p) => Number(p.ride_id) === Number(rideId))
@@ -99,6 +106,7 @@ function enrichRide(row, currentUserId, store) {
     my_driver_offer_id,
     pending_driver_offer_count,
     has_assigned_driver: row.assigned_driver_id ? 1 : 0,
+    offer_pending: isOfferPending(row) ? 1 : 0,
   };
 }
 
@@ -111,13 +119,14 @@ async function listRides({ scope = "all", search = "" }, currentUserId) {
     rows = rows.filter(
       (r) =>
         r.owner_id === currentUserId ||
+        r.assigned_driver_id === currentUserId ||
         store.passengers.some(
           (p) =>
             Number(p.ride_id) === Number(r.id) && p.user_id === currentUserId
         )
     );
   } else {
-    rows = rows.filter((r) => r.start_date >= today());
+    rows = rows.filter((r) => r.start_date >= today() && !isOfferPending(r));
   }
 
   if (q) {
@@ -184,15 +193,9 @@ function normalizeDestinationState(value) {
 }
 
 async function saveRide(ownerId, payload) {
-  const isOffer = payload.rideType === "offer";
   const roundtrip = payload.tripType === "roundtrip";
   const startDate = payload.startDate;
   const endDate = roundtrip ? payload.endDate : startDate;
-  const seats = isOffer ? Math.max(1, Number(payload.seats) || 1) : 1;
-  const rideCost = isOffer ? Math.max(0, Number(payload.rideCost) || 0) : 0;
-  const genderPreference = isOffer
-    ? normalizeGenderPreference(payload.genderPreference)
-    : "No preference";
   const destinationState = normalizeDestinationState(payload.destinationState);
   const timestamp = now();
   const sb = getSupabase();
@@ -201,7 +204,7 @@ async function saveRide(ownerId, payload) {
     const existing = throwIfError(
       await sb
         .from("rides")
-        .select("id")
+        .select("*")
         .eq("id", payload.rideId)
         .eq("owner_id", ownerId)
         .maybeSingle()
@@ -210,11 +213,31 @@ async function saveRide(ownerId, payload) {
       throw new Error("That ride could not be found for your account.");
     }
 
+    const wasPending = isOfferPending(existing);
+    const isOffer = wasPending ? true : payload.rideType === "offer";
+    const seats = isOffer ? Math.max(1, Number(payload.seats) || 1) : 1;
+    const rideCost = isOffer ? Math.max(0, Number(payload.rideCost) || 0) : 0;
+    const genderPreference = isOffer
+      ? normalizeGenderPreference(payload.genderPreference)
+      : "No preference";
+
+    if (wasPending) {
+      if (!String(payload.origin || "").trim() || !String(payload.destination || "").trim()) {
+        throw new Error("Enter departure and destination before publishing your offer.");
+      }
+      if (rideCost <= 0) {
+        throw new Error("Set a total cost before publishing your offer.");
+      }
+      if (seats < 1) {
+        throw new Error("Set at least one passenger seat before publishing your offer.");
+      }
+    }
+
     throwIfError(
       await sb
         .from("rides")
         .update({
-          ride_type: payload.rideType,
+          ride_type: isOffer ? "offer" : payload.rideType,
           roundtrip,
           seats,
           start_date: startDate,
@@ -224,13 +247,41 @@ async function saveRide(ownerId, payload) {
           destination_state: destinationState,
           ride_cost: rideCost,
           gender_preference: genderPreference,
+          offer_pending: false,
           updated_at: timestamp,
         })
         .eq("id", payload.rideId)
         .eq("owner_id", ownerId)
     );
-    return getRideById(payload.rideId, ownerId);
+
+    if (wasPending) {
+      const store = await fetchStore();
+      const publishedRide = findRide(store, payload.rideId);
+      const routeLabel = publishedRide ? formatRideRoute(publishedRide) : "the ride";
+      const passengers = store.passengers.filter(
+        (p) => Number(p.ride_id) === Number(payload.rideId)
+      );
+      for (const passenger of passengers) {
+        await createNotification(
+          passenger.user_id,
+          `Your ride offer for ${routeLabel} has been published and is now open on the ride board.`,
+          "ride_joined",
+          Number(payload.rideId),
+          null
+        );
+      }
+    }
+
+    const ride = await getRideById(payload.rideId, ownerId);
+    return { ...ride, published: wasPending ? 1 : 0 };
   }
+
+  const isOffer = payload.rideType === "offer";
+  const seats = isOffer ? Math.max(1, Number(payload.seats) || 1) : 1;
+  const rideCost = isOffer ? Math.max(0, Number(payload.rideCost) || 0) : 0;
+  const genderPreference = isOffer
+    ? normalizeGenderPreference(payload.genderPreference)
+    : "No preference";
 
   const row = throwIfError(
     await sb
@@ -248,6 +299,7 @@ async function saveRide(ownerId, payload) {
         ride_cost: rideCost,
         gender_preference: genderPreference,
         assigned_driver_id: null,
+        offer_pending: false,
         created_at: timestamp,
         updated_at: timestamp,
       })
@@ -294,6 +346,9 @@ async function joinRide(rideId, userId, options = {}) {
   const ride = findRide(store, rideId);
   if (!ride || ride.ride_type !== "offer") {
     throw new Error("That ride offer is not available.");
+  }
+  if (isOfferPending(ride)) {
+    throw new Error("This ride offer is not published yet.");
   }
   if (ride.owner_id === userId) {
     throw new Error("You cannot join your own ride.");
@@ -361,6 +416,14 @@ async function joinRide(rideId, userId, options = {}) {
       .eq("user_id", userId);
     throw new Error("That ride is full.");
   }
+
+  await createNotification(
+    userId,
+    `You joined a ride (${formatRideRoute(ride)}).`,
+    "ride_joined",
+    Number(rideId),
+    null
+  );
 }
 
 async function leaveRide(rideId, userId) {
@@ -768,6 +831,45 @@ async function ratePerson(rideId, raterUserId, ratedUserId, rating, comment, rol
   );
 }
 
+function formatRideDestination(ride) {
+  const destination = String(ride?.destination || "").trim();
+  const state = String(ride?.destination_state || "").trim();
+  if (!destination) {
+    return state;
+  }
+  if (!state) {
+    return destination;
+  }
+  return `${destination}, ${state}`;
+}
+
+function formatRideRoute(ride) {
+  const origin = String(ride?.origin || "").trim();
+  const destination = formatRideDestination(ride);
+  if (!origin && !destination) {
+    return "your ride";
+  }
+  if (!origin) {
+    return destination;
+  }
+  if (!destination) {
+    return origin;
+  }
+  return `${origin} to ${destination}`;
+}
+
+async function notifyDriverOfferPending(store, ride, driverUserId, offerId) {
+  const driver = findAccount(store, driverUserId);
+  const driverName = driver ? `${driver.fname} ${driver.lname}`.trim() : "A driver";
+  await createNotification(
+    ride.owner_id,
+    `${driverName} offered to drive your ride (${formatRideRoute(ride)}).`,
+    "driver_offer_pending",
+    ride.id,
+    offerId
+  );
+}
+
 async function createNotification(userId, message, kind, rideId, offerId) {
   throwIfError(
     await getSupabase().from("notifications").insert({
@@ -780,6 +882,18 @@ async function createNotification(userId, message, kind, rideId, offerId) {
       created_at: now(),
     })
   );
+}
+
+async function deleteDriverOfferNotifications(offerId) {
+  const result = await getSupabase()
+    .from("notifications")
+    .delete()
+    .eq("offer_id", offerId)
+    .eq("kind", "driver_offer_pending");
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
 }
 
 async function listPendingDriverOffers(rideId) {
@@ -800,6 +914,28 @@ async function listPendingDriverOffers(rideId) {
     });
 }
 
+function enrichNotification(row, store, userId) {
+  const ride = row.ride_id ? findRide(store, row.ride_id) : null;
+  const offer = row.offer_id
+    ? store.driver_offers.find((o) => Number(o.id) === Number(row.offer_id))
+    : null;
+  const driver = offer ? findAccount(store, offer.driver_user_id) : null;
+  const canRespond =
+    row.kind === "driver_offer_pending" &&
+    offer?.status === "pending" &&
+    ride?.owner_id === userId;
+
+  return {
+    ...row,
+    ride_origin: ride?.origin ?? "",
+    ride_destination: ride ? formatRideDestination(ride) : "",
+    driver_fname: driver?.fname ?? "",
+    driver_lname: driver?.lname ?? "",
+    offer_status: offer?.status ?? null,
+    can_respond: canRespond ? 1 : 0,
+  };
+}
+
 async function listNotifications(userId, unreadOnly = true) {
   const store = await fetchStore();
   let rows = store.notifications.filter((n) => n.user_id === userId);
@@ -808,7 +944,9 @@ async function listNotifications(userId, unreadOnly = true) {
   } else {
     rows = rows.slice(0, 50);
   }
-  return rows.sort((a, b) => b.created_at.localeCompare(a.created_at));
+  return rows
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .map((row) => enrichNotification(row, store, userId));
 }
 
 async function markNotificationsRead(userId, ids) {
@@ -867,6 +1005,7 @@ async function becomeDriver(rideId, userId) {
         .select("id, status")
         .single()
     );
+    await notifyDriverOfferPending(store, ride, userId, row.id);
     return row;
   }
 
@@ -883,7 +1022,88 @@ async function becomeDriver(rideId, userId) {
       .select("id, status")
       .single()
   );
+  await notifyDriverOfferPending(store, ride, userId, row.id);
   return row;
+}
+
+async function cancelDriverOffer(rideId, userId) {
+  const store = await fetchStore();
+  const ride = findRide(store, rideId);
+  if (!ride || ride.ride_type !== "request") {
+    throw new Error("Driver offers are only available on ride requests.");
+  }
+
+  const offer = store.driver_offers.find(
+    (o) =>
+      Number(o.ride_id) === Number(rideId) &&
+      o.driver_user_id === userId &&
+      o.status === "pending"
+  );
+  if (!offer) {
+    throw new Error("You do not have a pending driver offer on this ride.");
+  }
+
+  const sb = getSupabase();
+  throwIfError(await sb.from("driver_offers").delete().eq("id", offer.id));
+  await deleteDriverOfferNotifications(offer.id);
+
+  return { ok: true, message: "Your pending driver offer has been canceled." };
+}
+
+const DEFAULT_CONVERTED_OFFER_SEATS = 3;
+
+async function convertAcceptedRequestToOffer(sb, ride, driverUserId, timestamp) {
+  const originalRequesterId = ride.owner_id;
+  const routeLabel = formatRideRoute(ride);
+  const initialSeats = DEFAULT_CONVERTED_OFFER_SEATS;
+
+  throwIfError(
+    await sb
+      .from("rides")
+      .update({
+        ride_type: "offer",
+        owner_id: driverUserId,
+        assigned_driver_id: null,
+        seats: initialSeats,
+        ride_cost: 0,
+        offer_pending: true,
+        gender_preference: ride.gender_preference || "No preference",
+        updated_at: timestamp,
+      })
+      .eq("id", ride.id)
+  );
+
+  const passengerResult = await sb.from("passengers").insert({
+    ride_id: Number(ride.id),
+    user_id: originalRequesterId,
+    party_size: 1,
+    guest_details: [],
+    created_at: timestamp,
+  });
+  if (passengerResult.error && passengerResult.error.code !== "23505") {
+    throw new Error(passengerResult.error.message);
+  }
+
+  if (!passengerResult.error) {
+    throwIfError(
+      await sb
+        .from("rides")
+        .update({
+          seats: Math.max(0, initialSeats - 1),
+          updated_at: timestamp,
+        })
+        .eq("id", ride.id)
+    );
+    await createNotification(
+      originalRequesterId,
+      `Your ride request was accepted. The driver is completing offer details for ${routeLabel}. You are confirmed as a passenger.`,
+      "ride_joined",
+      Number(ride.id),
+      null
+    );
+  }
+
+  return { routeLabel, originalRequesterId };
 }
 
 async function respondToDriverOffer(rideId, offerId, ownerId, accept) {
@@ -910,14 +1130,12 @@ async function respondToDriverOffer(rideId, offerId, ownerId, accept) {
         .update({ status: "accepted", responded_at: timestamp })
         .eq("id", offerId)
     );
-    throwIfError(
-      await sb
-        .from("rides")
-        .update({
-          assigned_driver_id: offer.driver_user_id,
-          updated_at: timestamp,
-        })
-        .eq("id", rideId)
+
+    const { routeLabel } = await convertAcceptedRequestToOffer(
+      sb,
+      ride,
+      offer.driver_user_id,
+      timestamp
     );
 
     const otherPending = store.driver_offers.filter(
@@ -945,13 +1163,17 @@ async function respondToDriverOffer(rideId, offerId, ownerId, accept) {
 
     await createNotification(
       offer.driver_user_id,
-      "Your offer for a ride has been accepted.",
+      `Your offer was accepted. Complete seats, cost, and trip details to publish ${routeLabel} on the ride board.`,
       "driver_offer_accepted",
       rideId,
       offerId
     );
 
-    return { status: "accepted", message: "Driver offer accepted." };
+    return {
+      status: "accepted",
+      message:
+        "Driver accepted. The ride is an offer pending until the driver updates and saves trip details.",
+    };
   }
 
   throwIfError(
@@ -991,5 +1213,6 @@ module.exports = {
   listNotifications,
   markNotificationsRead,
   becomeDriver,
+  cancelDriverOffer,
   respondToDriverOffer,
 };

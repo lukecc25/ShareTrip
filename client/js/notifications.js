@@ -62,8 +62,20 @@ function renderNotificationBanner(container, notifications) {
   const items = notifications
     .map(
       (item) => `
-    <div class="notification-item ${item.kind === "driver_offer_accepted" ? "success" : item.kind === "driver_offer_declined" ? "error" : ""}" data-id="${item.id}">
+    <div class="notification-item ${item.kind === "driver_offer_accepted" || item.kind === "ride_joined" ? "success" : item.kind === "driver_offer_declined" ? "error" : item.kind === "driver_offer_pending" ? "pending" : ""}" data-id="${item.id}">
       <p>${escapeHtml(item.message)}</p>
+      ${
+        item.ride_origin || item.ride_destination
+          ? `<p class="profile-notification-route">${escapeHtml(item.ride_origin || "Start")} → ${escapeHtml(item.ride_destination || "Destination")}</p>`
+          : ""
+      }
+      ${
+        item.can_respond
+          ? `<div class="profile-notification-actions-row">
+              <a href="/my-profile.html#profile-notifications" class="profile-notification-link">Review offer on profile</a>
+            </div>`
+          : ""
+      }
       <button type="button" class="notification-dismiss" data-dismiss-id="${item.id}" aria-label="Dismiss notification">&times;</button>
     </div>`
     )

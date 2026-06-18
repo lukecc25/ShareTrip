@@ -50,7 +50,7 @@ function renderRequestDriverActions(ride) {
   }
   const status = ride.my_driver_offer_status;
   if (status === "pending") {
-    return '<span class="ride-status pending-badge">Pending</span>';
+    return `<button type="button" class="secondary-button cancel-pending-offer" data-action="cancel-driver-offer" data-ride-id="${ride.id}" data-offer-id="${ride.my_driver_offer_id}">Cancel pending</button>`;
   }
   if (status === "accepted") {
     return '<span class="ride-status">Accepted as driver</span>';
@@ -246,9 +246,14 @@ function render() {
   } = u();
 
   const ride = detail.ride;
-  const typeLabel = rideTypeLabel(ride.ride_type);
-  const typeClass = typeLabel === "Request" ? "request" : "offer";
-  const isOffer = typeLabel === "Offer";
+  const isOfferPending = u().isOfferPendingRide(ride);
+  const typeLabel = rideTypeLabel(ride.ride_type, ride);
+  const typeClass = isOfferPending
+    ? "offer-pending"
+    : typeLabel === "Request"
+      ? "request"
+      : "offer";
+  const isOffer = String(ride.ride_type || "").toLowerCase() === "offer";
   const isOwner = ride.is_owner === 1;
   const hasJoined = ride.current_user_joined === 1;
   const remainingSeats = ride.seats;
@@ -263,13 +268,17 @@ function render() {
 
   let actions = "";
   if (isOffer) {
-    if (isOwner) {
+    if (isOwner && isOfferPending) {
+      actions = `<a href="/dashboard.html?edit=${ride.id}&showForm=1&scope=my#createRideForm" class="primary-small-button">Complete offer</a>`;
+    } else if (isOwner) {
       actions = '<span class="ride-status">Your ride</span>';
     } else if (hasJoined) {
-      actions = '<span class="ride-status">Joined</span>';
-    } else if (remainingSeats > 0) {
+      actions = isOfferPending
+        ? '<span class="ride-status pending-badge">Offer pending</span>'
+        : '<span class="ride-status">Joined</span>';
+    } else if (!isOfferPending && remainingSeats > 0) {
       actions = `<button type="button" class="primary-small-button" data-action="join" data-ride-id="${ride.id}" data-remaining-seats="${remainingSeats}">Join Ride</button>`;
-    } else {
+    } else if (!isOfferPending) {
       actions = '<span class="ride-status full">Full</span>';
     }
   } else if (!isOwner) {
@@ -293,7 +302,7 @@ function render() {
         <div class="ride-card-top">
           <span class="ride-type ${typeClass}">${escapeHtml(typeLabel)}</span>
           ${
-            isOffer
+            isOffer && !isOfferPending
               ? `<span class="ride-price"><strong>$${Number(splitCost).toFixed(2)}</strong><small>$${Number(ride.ride_cost).toFixed(2)} total</small></span>`
               : ""
           }
@@ -309,10 +318,12 @@ function render() {
           <div><span>End</span><strong>${escapeHtml(formatDateValue(ride.end_date))}</strong></div>
           <div><span>Trip</span><strong>${ride.roundtrip ? "Round trip" : "One way"}</strong></div>
           ${
-            isOffer
+            isOffer && !isOfferPending
               ? `<div><span>Passenger Seats</span><strong>${remainingSeats}/${totalSeats}</strong></div>
                  <div><span>Split cost</span><strong>$${Number(splitCost).toFixed(2)} each</strong></div>`
-              : ""
+              : isOfferPending
+                ? `<div><span>Status</span><strong>Driver completing offer details</strong></div>`
+                : ""
           }
           <div><span>Preference</span><strong>${escapeHtml(ride.gender_preference)}</strong></div>
           ${assignedDriverHtml}
@@ -367,6 +378,16 @@ function bindEvents(rideId) {
             method: "POST",
           });
           window.location.href = `/ride-details.html?ride=${targetRideId}&driver_pending=1`;
+          return;
+        }
+        if (action === "cancel-driver-offer") {
+          if (!window.confirm("Cancel your pending driver offer?")) {
+            return;
+          }
+          await ShareTripApi.apiFetch(`/api/rides/${targetRideId}/cancel-driver-offer`, {
+            method: "POST",
+          });
+          window.location.reload();
           return;
         }
         if (action === "accept-offer") {
@@ -579,7 +600,7 @@ async function initRideDetailsPage() {
     messageType = "success";
   }
   if (query.has("offer_responded")) {
-    message = "Driver offer updated.";
+    message = "Driver accepted. The offer stays pending until the driver saves trip details.";
     messageType = "success";
   }
 

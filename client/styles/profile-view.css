@@ -404,6 +404,73 @@
     padding: 4px 10px;
 }
 
+.profile-notification-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 14px;
+}
+
+.profile-notification-list {
+    display: grid;
+    gap: 10px;
+}
+
+.profile-notification-item {
+    align-items: flex-start;
+}
+
+.profile-notification-item.is-read {
+    opacity: 0.72;
+}
+
+.profile-notification-body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.profile-notification-body p {
+    margin: 0;
+}
+
+.profile-notification-meta {
+    align-items: center;
+    color: #64748b;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 12px;
+    font-weight: 600;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.profile-notification-route {
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 700;
+    margin: 8px 0 0;
+}
+
+.profile-notification-actions-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.profile-notification-link {
+    color: #2563eb;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.profile-notification-link:hover {
+    text-decoration: underline;
+}
+
+.profile-notification-dismiss {
+    margin-top: 2px;
+}
+
 .review-list {
     display: grid;
     gap: 12px;
