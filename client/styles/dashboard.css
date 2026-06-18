@@ -15,15 +15,11 @@ body.dashboard-compose-mode #create-ride-link {
 }
 
 body.dashboard-body {
-    background:
-        linear-gradient(rgba(15, 23, 42, 0.44), rgba(15, 23, 42, 0.58)),
-        url("../images/pexels-mountains-1852955_1920.jpg") center / cover fixed;
+    background: #e8eef5;
 }
 
 body.donation-body {
-    background:
-        linear-gradient(rgba(15, 23, 42, 0.42), rgba(15, 23, 42, 0.58)),
-        url("../images/evgenit-road-4055838_1920.jpg") center / cover fixed;
+    background: #e8eef5;
 }
 
 .dashboard-header {
@@ -83,6 +79,10 @@ body.donation-body {
     grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
 }
 
+.donation-grid > * {
+    min-width: 0;
+}
+
 .donation-grid .detail-card + .detail-card {
     margin-top: 0;
 }
@@ -90,6 +90,7 @@ body.donation-body {
 .donation-form {
     display: grid;
     gap: 12px;
+    min-width: 0;
 }
 
 .donation-form label {
@@ -150,8 +151,10 @@ body.donation-body {
     display: block;
     font-size: 15px;
     font-weight: 700;
+    min-width: 0;
     padding: 12px;
     text-align: center;
+    overflow-wrap: anywhere;
 }
 
 .donation-amounts input:checked + span {
@@ -1325,6 +1328,10 @@ body.donation-body {
         padding: 30px 16px 48px;
     }
 
+    .donation-grid {
+        grid-template-columns: 1fr;
+    }
+
     .donation-hero {
         align-items: stretch;
         display: grid;
@@ -1335,7 +1342,7 @@ body.donation-body {
     }
 
     .donation-amounts {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr;
     }
 
     .ride-filter-panel,
