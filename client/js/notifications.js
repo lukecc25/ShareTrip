@@ -62,7 +62,7 @@ function renderNotificationBanner(container, notifications) {
   const items = notifications
     .map(
       (item) => `
-    <div class="notification-item ${item.kind === "driver_offer_accepted" || item.kind === "ride_joined" ? "success" : item.kind === "driver_offer_declined" ? "error" : item.kind === "driver_offer_pending" ? "pending" : ""}" data-id="${item.id}">
+    <div class="notification-item ${item.kind === "driver_offer_accepted" || item.kind === "ride_joined" ? "success" : item.kind === "driver_offer_declined" ? "error" : item.kind === "driver_offer_cancelled" ? "pending" : item.kind === "driver_offer_pending" || item.kind === "driver_offer_waiting" ? "pending" : ""}" data-id="${item.id}">
       <p>${escapeHtml(item.message)}</p>
       ${
         item.ride_origin || item.ride_destination
@@ -106,6 +106,20 @@ async function showNotificationBanner() {
     return;
   }
   const notifications = await loadNotifications();
+  if (!notifications.length) {
+    renderNotificationBanner(container, notifications);
+    return;
+  }
+
+  try {
+    await ShareTripApi.apiFetch("/api/notifications/read", {
+      method: "POST",
+      body: JSON.stringify({ ids: notifications.map((item) => item.id) }),
+    });
+  } catch {
+    // Still show the banner even if marking read fails.
+  }
+
   renderNotificationBanner(container, notifications);
 }
 

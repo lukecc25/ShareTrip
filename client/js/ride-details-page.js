@@ -387,7 +387,7 @@ function bindEvents(rideId) {
           await ShareTripApi.apiFetch(`/api/rides/${targetRideId}/cancel-driver-offer`, {
             method: "POST",
           });
-          window.location.reload();
+          window.location.href = `/ride-details.html?ride=${targetRideId}&driver_offer_cancelled=1`;
           return;
         }
         if (action === "accept-offer") {
@@ -599,10 +599,16 @@ async function initRideDetailsPage() {
     message = "Your driver offer is pending approval.";
     messageType = "success";
   }
+  if (query.has("driver_offer_cancelled")) {
+    message = "Your pending offer to drive has been cancelled.";
+    messageType = "success";
+  }
   if (query.has("offer_responded")) {
     message = "Driver accepted. The offer stays pending until the driver saves trip details.";
     messageType = "success";
   }
+
+  u().stripFlashQueryParams();
 
   try {
     const session = await ShareTripAuth.getSession();

@@ -553,7 +553,7 @@ function renderProfileNotification(item) {
       ? "success"
       : item.kind === "driver_offer_declined"
         ? "error"
-        : item.kind === "driver_offer_pending"
+        : item.kind === "driver_offer_pending" || item.kind === "driver_offer_waiting" || item.kind === "driver_offer_cancelled"
           ? "pending"
           : "";
   const readClass = item.read_flag ? "is-read" : "";

@@ -10,6 +10,7 @@ const MESSAGES = {
   left: "You left the ride.",
   canceled: "Your ride has been canceled.",
   commented: "Your comment has been posted.",
+  driverOfferCancelled: "Your pending offer to drive has been cancelled.",
 };
 
 let state = {
@@ -56,6 +57,11 @@ function parseInitialState() {
     state.message = "Your driver offer is pending approval.";
     state.messageType = "success";
   }
+  if (query.has("driver_offer_cancelled")) {
+    showMessage("driverOfferCancelled");
+  }
+
+  u().stripFlashQueryParams();
 }
 
 async function loadRides() {
@@ -748,7 +754,7 @@ function bindRideActions() {
           await ShareTripApi.apiFetch(`/api/rides/${rideId}/cancel-driver-offer`, {
             method: "POST",
           });
-          window.location.reload();
+          window.location.href = `/dashboard.html?driver_offer_cancelled=1&scope=${state.scope}`;
           return;
         }
         if (action === "accept-offer") {

@@ -127,6 +127,38 @@ function readQuery() {
   return new URLSearchParams(window.location.search);
 }
 
+const FLASH_QUERY_KEYS = [
+  "created",
+  "updated",
+  "published",
+  "joined",
+  "left",
+  "canceled",
+  "commented",
+  "driver_pending",
+  "driver_offer_cancelled",
+  "offer_responded",
+];
+
+function stripFlashQueryParams(keys = FLASH_QUERY_KEYS) {
+  const url = new URL(window.location.href);
+  let changed = false;
+
+  for (const key of keys) {
+    if (url.searchParams.has(key)) {
+      url.searchParams.delete(key);
+      changed = true;
+    }
+  }
+
+  if (!changed) {
+    return;
+  }
+
+  const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+  window.history.replaceState({}, "", nextUrl);
+}
+
 function setQuery(params) {
   const url = new URL(window.location.href);
   url.search = "";
@@ -442,5 +474,6 @@ window.ShareTripUtils = {
   fadeOutElement,
   syncSiteHeaderOffset,
   readQuery,
+  stripFlashQueryParams,
   setQuery,
 };

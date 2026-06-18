@@ -43,6 +43,159 @@ function nameMatches(account, search) {
   );
 }
 
+const US_STATE_NAME_TO_ABBREV = {
+  alabama: "AL",
+  alaska: "AK",
+  arizona: "AZ",
+  arkansas: "AR",
+  california: "CA",
+  colorado: "CO",
+  connecticut: "CT",
+  delaware: "DE",
+  "district of columbia": "DC",
+  florida: "FL",
+  georgia: "GA",
+  hawaii: "HI",
+  idaho: "ID",
+  illinois: "IL",
+  indiana: "IN",
+  iowa: "IA",
+  kansas: "KS",
+  kentucky: "KY",
+  louisiana: "LA",
+  maine: "ME",
+  maryland: "MD",
+  massachusetts: "MA",
+  michigan: "MI",
+  minnesota: "MN",
+  mississippi: "MS",
+  missouri: "MO",
+  montana: "MT",
+  nebraska: "NE",
+  nevada: "NV",
+  "new hampshire": "NH",
+  "new jersey": "NJ",
+  "new mexico": "NM",
+  "new york": "NY",
+  "north carolina": "NC",
+  "north dakota": "ND",
+  ohio: "OH",
+  oklahoma: "OK",
+  oregon: "OR",
+  pennsylvania: "PA",
+  "rhode island": "RI",
+  "south carolina": "SC",
+  "south dakota": "SD",
+  tennessee: "TN",
+  texas: "TX",
+  utah: "UT",
+  vermont: "VT",
+  virginia: "VA",
+  washington: "WA",
+  "west virginia": "WV",
+  wisconsin: "WI",
+  wyoming: "WY",
+};
+
+const US_STATE_ABBREV_TO_NAME = Object.fromEntries(
+  Object.entries(US_STATE_NAME_TO_ABBREV).map(([name, abbr]) => [
+    abbr.toLowerCase(),
+    name,
+  ])
+);
+
+function expandStateSearchTerms(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  if (!raw) {
+    return [];
+  }
+
+  if (US_STATE_NAME_TO_ABBREV[raw]) {
+    return [raw, US_STATE_NAME_TO_ABBREV[raw].toLowerCase()];
+  }
+
+  if (US_STATE_ABBREV_TO_NAME[raw]) {
+    return [raw, US_STATE_ABBREV_TO_NAME[raw]];
+  }
+
+  return [raw];
+}
+
+function isKnownStateQuery(query) {
+  const raw = String(query || "").trim().toLowerCase();
+  return Boolean(US_STATE_NAME_TO_ABBREV[raw] || US_STATE_ABBREV_TO_NAME[raw]);
+}
+
+function destinationStateMatches(rideState, query) {
+  const state = String(rideState || "").trim().toLowerCase();
+  if (!state) {
+    return false;
+  }
+
+  const queryTerms = new Set(expandStateSearchTerms(query));
+  const stateTerms = new Set(expandStateSearchTerms(state));
+
+  for (const term of queryTerms) {
+    if (stateTerms.has(term)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function extractEmbeddedState(location) {
+  const text = String(location || "").trim();
+  if (!text) {
+    return null;
+  }
+
+  const commaMatch = text.match(/,\s*([^,]+)$/);
+  if (!commaMatch) {
+    return null;
+  }
+
+  return commaMatch[1].trim();
+}
+
+function locationTextMatches(location, query) {
+  const text = String(location || "").trim().toLowerCase();
+  const q = query.trim().toLowerCase();
+  if (!text || !q) {
+    return false;
+  }
+
+  if (text.includes(",")) {
+    const cityPart = text.split(",").slice(0, -1).join(",").trim();
+    return cityPart.includes(q);
+  }
+
+  return text.includes(q);
+}
+
+function rideMatchesLocationSearch(ride, query) {
+  const q = query.trim();
+  if (!q) {
+    return true;
+  }
+
+  const stateSources = [
+    ride.destination_state,
+    extractEmbeddedState(ride.destination),
+    extractEmbeddedState(ride.origin),
+  ].filter(Boolean);
+
+  if (isKnownStateQuery(q)) {
+    return stateSources.some((state) => destinationStateMatches(state, q));
+  }
+
+  if (locationTextMatches(ride.origin, q) || locationTextMatches(ride.destination, q)) {
+    return true;
+  }
+
+  return stateSources.some((state) => destinationStateMatches(state, q));
+}
+
 async function getProfile(userId) {
   return authService.getAccountById(userId);
 }
@@ -131,11 +284,7 @@ async function listRides({ scope = "all", search = "" }, currentUserId) {
 
   if (q) {
     rows = rows.filter((r) => {
-      if (
-        r.origin.toLowerCase().includes(q.toLowerCase()) ||
-        r.destination.toLowerCase().includes(q.toLowerCase()) ||
-        String(r.destination_state || "").toLowerCase().includes(q.toLowerCase())
-      ) {
+      if (rideMatchesLocationSearch(r, q)) {
         return true;
       }
       const owner = findAccount(store, r.owner_id);
@@ -189,7 +338,27 @@ async function getRideById(rideId, currentUserId) {
 
 function normalizeDestinationState(value) {
   const trimmed = String(value || "").trim();
-  return trimmed ? trimmed.slice(0, 50) : null;
+  if (!trimmed) {
+    return null;
+  }
+
+  const limited = trimmed.slice(0, 50);
+  const lower = limited.toLowerCase();
+
+  if (US_STATE_NAME_TO_ABBREV[lower]) {
+    return US_STATE_NAME_TO_ABBREV[lower];
+  }
+
+  const nameFromAbbrev = US_STATE_ABBREV_TO_NAME[lower];
+  if (nameFromAbbrev) {
+    return US_STATE_NAME_TO_ABBREV[nameFromAbbrev];
+  }
+
+  if (/^[a-zA-Z]{2}$/.test(limited)) {
+    return limited.toUpperCase();
+  }
+
+  return limited;
 }
 
 async function saveRide(ownerId, payload) {
@@ -861,10 +1030,18 @@ function formatRideRoute(ride) {
 async function notifyDriverOfferPending(store, ride, driverUserId, offerId) {
   const driver = findAccount(store, driverUserId);
   const driverName = driver ? `${driver.fname} ${driver.lname}`.trim() : "A driver";
+  const routeLabel = formatRideRoute(ride);
   await createNotification(
     ride.owner_id,
-    `${driverName} offered to drive your ride (${formatRideRoute(ride)}).`,
+    `${driverName} offered to drive your ride (${routeLabel}).`,
     "driver_offer_pending",
+    ride.id,
+    offerId
+  );
+  await createNotification(
+    driverUserId,
+    `Your offer to drive (${routeLabel}) is waiting for approval.`,
+    "driver_offer_waiting",
     ride.id,
     offerId
   );
@@ -884,12 +1061,11 @@ async function createNotification(userId, message, kind, rideId, offerId) {
   );
 }
 
-async function deleteDriverOfferNotifications(offerId) {
+async function deleteNotificationsForOffer(offerId) {
   const result = await getSupabase()
     .from("notifications")
     .delete()
-    .eq("offer_id", offerId)
-    .eq("kind", "driver_offer_pending");
+    .eq("offer_id", offerId);
 
   if (result.error) {
     throw new Error(result.error.message);
@@ -944,6 +1120,21 @@ async function listNotifications(userId, unreadOnly = true) {
   } else {
     rows = rows.slice(0, 50);
   }
+  rows = rows.filter((row) => {
+    if (
+      row.kind !== "driver_offer_pending" &&
+      row.kind !== "driver_offer_waiting"
+    ) {
+      return true;
+    }
+    if (!row.offer_id) {
+      return true;
+    }
+    const offer = store.driver_offers.find(
+      (o) => Number(o.id) === Number(row.offer_id)
+    );
+    return offer?.status === "pending";
+  });
   return rows
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
     .map((row) => enrichNotification(row, store, userId));
@@ -1044,8 +1235,17 @@ async function cancelDriverOffer(rideId, userId) {
   }
 
   const sb = getSupabase();
-  throwIfError(await sb.from("driver_offers").delete().eq("id", offer.id));
-  await deleteDriverOfferNotifications(offer.id);
+  const routeLabel = formatRideRoute(ride);
+  const offerId = offer.id;
+  await deleteNotificationsForOffer(offerId);
+  throwIfError(await sb.from("driver_offers").delete().eq("id", offerId));
+  await createNotification(
+    userId,
+    `Your pending offer to drive (${routeLabel}) has been cancelled.`,
+    "driver_offer_cancelled",
+    Number(rideId),
+    null
+  );
 
   return { ok: true, message: "Your pending driver offer has been canceled." };
 }
@@ -1152,15 +1352,17 @@ async function respondToDriverOffer(rideId, offerId, ownerId, accept) {
           .update({ status: "declined", responded_at: timestamp })
           .eq("id", other.id)
       );
+      await deleteNotificationsForOffer(other.id);
       await createNotification(
         other.driver_user_id,
-        "Your offer has been declined.",
+        `Your offer to drive (${formatRideRoute(ride)}) has been declined.`,
         "driver_offer_declined",
         rideId,
         other.id
       );
     }
 
+    await deleteNotificationsForOffer(offerId);
     await createNotification(
       offer.driver_user_id,
       `Your offer was accepted. Complete seats, cost, and trip details to publish ${routeLabel} on the ride board.`,
@@ -1182,9 +1384,10 @@ async function respondToDriverOffer(rideId, offerId, ownerId, accept) {
       .update({ status: "declined", responded_at: timestamp })
       .eq("id", offerId)
   );
+  await deleteNotificationsForOffer(offerId);
   await createNotification(
     offer.driver_user_id,
-    "Your offer has been declined.",
+    `Your offer to drive (${formatRideRoute(ride)}) has been declined.`,
     "driver_offer_declined",
     rideId,
     offerId
