@@ -6,6 +6,7 @@ function sessionUserId(req) {
 }
 const ridesService = require("../ridesService");
 const rideArchive = require("../rideArchive");
+const messagesService = require("../messagesService");
 
 const router = express.Router();
 
@@ -236,6 +237,70 @@ router.delete("/:id/ratings/:ratedUserId", requireApiAuth, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+router.get("/:id/messages", requireApiAuth, async (req, res) => {
+  try {
+    const result = await messagesService.listMessages(req.params.id, req.userId);
+    res.json(result);
+  } catch (err) {
+    const status = err.message.includes("access")
+      ? 403
+      : err.message.includes("not found")
+      ? 404
+      : 500;
+    res.status(status).json({ error: err.message });
+  }
+});
+ 
+router.post("/:id/messages", requireApiAuth, async (req, res) => {
+  try {
+    await messagesService.sendMessage(req.params.id, req.userId, req.body.body);
+    res.json({ success: true });
+  } catch (err) {
+    const status = err.message.includes("access")
+      ? 403
+      : err.message.includes("Please enter")
+      ? 400
+      : err.message.includes("not found")
+      ? 404
+      : 500;
+    res.status(status).json({ error: err.message });
+  }
+});
+
+router.put("/:id/ride-details", requireApiAuth, async (req, res) => {
+  try {
+    await messagesService.updateRideDetails(req.params.id, req.userId, {
+      departureTime: req.body.departure_time,
+      rideNotes: req.body.ride_notes,
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    const status = err.message.includes("Only the driver") ? 403
+      : err.message.includes("not found") ? 404
+      : 500;
+    res.status(status).json({ error: err.message });
+  }
+});
+ 
+// Driver or the passenger themselves updates one passenger's pickup spot.
+router.put("/:id/passengers/:passengerUserId/pickup-spot", requireApiAuth, async (req, res) => {
+  try {
+    await messagesService.updatePickupSpot(
+      req.params.id,
+      req.params.passengerUserId,
+      req.userId,
+      req.body.pickup_spot
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    const status = err.message.includes("only update") ? 403
+      : err.message.includes("access") ? 403
+      : err.message.includes("not found") ? 404
+      : 500;
+    res.status(status).json({ error: err.message });
   }
 });
 

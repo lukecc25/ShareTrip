@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Messages | ShareTrip</title>
+  <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/style.css">
+  <link rel="stylesheet" href="/styles/dashboard.css">
+  <link rel="stylesheet" href="/styles/messages.css">
+</head>
+<body class="dashboard-body">
+  <div id="navbar-root"></div>
+  <div id="messages-message" class="dashboard-message site-fixed-alert" hidden></div>
+
+  <main class="dashboard-page">
+    <div class="dashboard-header">
+      <div>
+        <h1>Messages</h1>
+        <p>Your conversations with drivers and passengers.</p>
+      </div>
+    </div>
+    <div id="threads-root"></div>
+  </main>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script src="/js/messages-page.js"></script>
+</body>
+</html>

@@ -68,6 +68,13 @@ async function renderNavbar(active = "") {
     donationLink.className = `nav-link${active === "donations" ? " active" : ""}`;
     donationLink.textContent = "Donate";
 
+    // Messages link - the unread dot is added asynchronously below.
+    const messagesLink = document.createElement("a");
+    messagesLink.href = "/messages.html";
+    messagesLink.className = `nav-link${active === "messages" ? " active" : ""}`;
+    messagesLink.dataset.nav = "messages";
+    messagesLink.textContent = "Messages";
+
     const mobileProfileLink = document.createElement("a");
     mobileProfileLink.href = "/my-profile.html";
     mobileProfileLink.className = `nav-link nav-mobile-profile-link${active === "profile" ? " active" : ""}`;
@@ -84,6 +91,7 @@ async function renderNavbar(active = "") {
 
     primaryContainer.appendChild(howItWorksLink);
     primaryContainer.appendChild(dashboardLink);
+    primaryContainer.appendChild(messagesLink);
     primaryContainer.appendChild(donationLink);
     primaryContainer.appendChild(mobileProfileLink);
     accountContainer.appendChild(profileLink);
@@ -91,6 +99,12 @@ async function renderNavbar(active = "") {
     if (mobileProfileContainer) {
       mobileProfileContainer.appendChild(mobileProfileIconLink);
     }
+
+    // Fetch the unread status and add a red dot next to Messages if needed.
+    // This is done after the links are rendered so the rest of the navbar
+    // never waits on this request.
+    updateNavUnreadDot();
+
     return;
   }
 
@@ -99,6 +113,27 @@ async function renderNavbar(active = "") {
   loginLink.className = "login-btn";
   loginLink.textContent = "Login / Sign Up";
   accountContainer.appendChild(loginLink);
+}
+
+async function updateNavUnreadDot() {
+  try {
+    const summary = await ShareTripApi.apiFetch("/api/messages/unread-summary");
+    const messagesLink = document.querySelector('[data-nav="messages"]');
+    if (!messagesLink) {
+      return;
+    }
+    const existingDot = messagesLink.querySelector(".nav-unread-dot");
+    if (summary.has_unread && !existingDot) {
+      const dot = document.createElement("span");
+      dot.className = "nav-unread-dot";
+      dot.setAttribute("aria-label", "Unread messages");
+      messagesLink.appendChild(dot);
+    } else if (!summary.has_unread && existingDot) {
+      existingDot.remove();
+    }
+  } catch (error) {
+    // A failed unread check should never break the navbar.
+  }
 }
 
 function createProfileAvatarLink(profile, active, extraClass = "") {
@@ -178,7 +213,12 @@ window.ShareTripNavbar = { renderNavbar };
 function getActiveNavFromPath() {
   const path = window.location.pathname.replace(/\/$/, "");
 
-  if (path === "/dashboard" || path === "/dashboard.html" || path === "/ride-details" || path === "/ride-details.html") {
+  if (
+    path === "/dashboard" ||
+    path === "/dashboard.html" ||
+    path === "/ride-details" ||
+    path === "/ride-details.html"
+  ) {
     return "dashboard";
   }
 
@@ -192,6 +232,15 @@ function getActiveNavFromPath() {
 
   if (path === "/my-profile" || path === "/my-profile.html" || path === "/profile" || path === "/profile.html") {
     return "profile";
+  }
+
+  if (
+    path === "/messages" ||
+    path === "/messages.html" ||
+    path === "/message-thread" ||
+    path === "/message-thread.html"
+  ) {
+    return "messages";
   }
 
   return "";
