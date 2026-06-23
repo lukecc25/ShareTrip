@@ -17,6 +17,8 @@ async function fetchStore() {
     sb.from("ratings").select("*"),
     sb.from("driver_offers").select("*"),
     sb.from("notifications").select("*"),
+    sb.from("messages").select("*"),
+    sb.from("message_reads").select("*"),
   ]);
 
   for (const result of results) {
@@ -33,6 +35,8 @@ async function fetchStore() {
     ratings,
     driver_offers,
     notifications,
+    messages,
+    message_reads,
   ] = results.map((r) => r.data);
 
   return {
@@ -43,6 +47,8 @@ async function fetchStore() {
     ratings: ratings.map(normalizeIdRow),
     driver_offers: driver_offers.map(normalizeIdRow),
     notifications: notifications.map(normalizeNotification),
+    messages: messages.map(normalizeIdRow),
+    message_reads: message_reads.map(normalizeIdRow),
   };
 }
 

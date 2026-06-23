@@ -1,0 +1,386 @@
+.thread-list {
+    display: grid;
+    gap: 10px;
+}
+
+.thread-row {
+    align-items: center;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    display: grid;
+    gap: 14px;
+    grid-template-columns: 48px 1fr auto;
+    padding: 14px 16px;
+    position: relative;
+    text-decoration: none;
+}
+
+.thread-row.unread {
+    border-color: #93c5fd;
+}
+
+.thread-avatar {
+    border-radius: 50%;
+    height: 48px;
+    overflow: hidden;
+    width: 48px;
+}
+
+.thread-avatar img {
+    height: 100%;
+    object-fit: cover;
+    width: 100%;
+}
+
+.thread-avatar-fallback {
+    align-items: center;
+    background: #e0f2fe;
+    color: #075985;
+    display: flex;
+    font-weight: 700;
+    justify-content: center;
+}
+
+.thread-info {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.thread-top-row {
+    align-items: baseline;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+}
+
+.thread-top-row strong {
+    color: #0f172a;
+    font-size: 16px;
+}
+
+.thread-date {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.thread-route {
+    color: #334155;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+.thread-preview {
+    color: #64748b;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.thread-empty-preview {
+    font-style: italic;
+}
+
+.thread-unread-dot {
+    background: #ef4444;
+    border-radius: 50%;
+    height: 10px;
+    position: absolute;
+    right: 14px;
+    top: 14px;
+    width: 10px;
+}
+
+/* Small red dot for the "Messages" nav bar link when there are unread chats. */
+.nav-unread-dot {
+    background: #ef4444;
+    border-radius: 50%;
+    display: inline-block;
+    height: 8px;
+    margin-left: 4px;
+    vertical-align: top;
+    width: 8px;
+}
+
+.chat-thread {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 480px;
+    margin-bottom: 14px;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.chat-message {
+    display: flex;
+    flex-direction: column;
+    max-width: 75%;
+}
+
+.chat-message.own {
+    align-items: flex-end;
+    align-self: flex-end;
+}
+
+.chat-message-author {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 2px;
+}
+
+.chat-message-bubble {
+    background: #f1f5f9;
+    border-radius: 12px;
+    color: #1e293b;
+    font-size: 14px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+    padding: 10px 12px;
+}
+
+.chat-message.own .chat-message-bubble {
+    background: #2563eb;
+    color: white;
+}
+
+.chat-message-time {
+    color: #94a3b8;
+    font-size: 11px;
+    margin-top: 3px;
+}
+
+.chat-composer {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    display: flex;
+    gap: 10px;
+    padding: 12px;
+}
+
+.chat-composer textarea {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    flex: 1;
+    font: inherit;
+    min-height: 44px;
+    padding: 10px;
+    resize: vertical;
+}
+
+.chat-composer textarea:focus {
+    border-color: #2563eb;
+    outline: 2px solid rgba(37, 99, 235, 0.2);
+}
+
+.ride-detail-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    margin-bottom: 14px;
+    overflow: hidden;
+}
+
+.ride-detail-card-header {
+    align-items: flex-start;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    padding: 12px 16px;
+}
+
+.ride-detail-route {
+    color: #0f172a;
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0 0 4px;
+}
+
+.ride-detail-meta {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+}
+
+.ride-detail-meta span {
+    color: #64748b;
+    font-size: 12px;
+}
+
+.passenger-count-pill {
+    background: #f1f5f9;
+    border-radius: 999px;
+    color: #475569 !important;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 8px;
+}
+
+.ride-details-edit-btn {
+    flex-shrink: 0;
+    font-size: 13px;
+    padding: 5px 12px;
+}
+
+.ride-details-grid {
+    display: grid;
+    gap: 0;
+    grid-template-columns: 1fr 1fr;
+}
+
+.ride-details-cell {
+    border-right: 1px solid #e2e8f0;
+    border-top: 1px solid #e2e8f0;
+    padding: 10px 14px;
+}
+
+.ride-details-cell:nth-child(even) {
+    border-right: none;
+}
+
+.ride-details-cell-full {
+    border-right: none;
+    grid-column: 1 / -1;
+}
+
+.ride-details-label {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+    margin: 0 0 5px;
+}
+
+.ride-details-label i {
+    font-size: 13px;
+    margin-right: 3px;
+    vertical-align: -1px;
+}
+
+.ride-details-value {
+    color: #1e293b;
+    font-size: 14px;
+    margin: 0;
+}
+
+.ride-details-empty {
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.ride-details-input {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 13px;
+    padding: 6px 8px;
+    width: 100%;
+}
+
+.ride-details-input:focus {
+    border-color: #2563eb;
+    outline: 2px solid rgba(37, 99, 235, 0.2);
+}
+
+textarea.ride-details-input {
+    min-height: 52px;
+    resize: vertical;
+}
+
+.pickup-list {
+    display: grid;
+    gap: 8px;
+}
+
+.pickup-row {
+    align-items: flex-start;
+    display: flex;
+    gap: 10px;
+}
+
+.pickup-avatar {
+    align-items: center;
+    background: #e0f2fe;
+    border-radius: 50%;
+    color: #075985;
+    display: flex;
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 700;
+    height: 28px;
+    justify-content: center;
+    width: 28px;
+}
+
+.pickup-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.pickup-name {
+    color: #1e293b;
+    font-size: 13px;
+    font-weight: 700;
+    margin: 0 0 2px;
+}
+
+.pickup-spot {
+    color: #475569;
+    font-size: 13px;
+    margin: 0;
+}
+
+.pickup-empty {
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.pickup-spot-input {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 13px;
+    padding: 5px 8px;
+    width: 100%;
+}
+
+.pickup-spot-input:focus {
+    border-color: #2563eb;
+    outline: 2px solid rgba(37, 99, 235, 0.2);
+}
+
+@media (max-width: 700px) {
+    .thread-row {
+        grid-template-columns: 40px 1fr;
+    }
+
+    .thread-unread-dot {
+        right: 10px;
+        top: 10px;
+    }
+
+    .chat-thread {
+        height: 60vh;
+    }
+
+    .ride-details-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ride-details-cell {
+        border-right: none;
+    }
+}
