@@ -19,6 +19,7 @@ async function fetchStore() {
     sb.from("notifications").select("*"),
     sb.from("messages").select("*"),
     sb.from("message_reads").select("*"),
+    sb.from("guest_tokens").select("*"),
   ]);
 
   for (const result of results) {
@@ -37,6 +38,7 @@ async function fetchStore() {
     notifications,
     messages,
     message_reads,
+    guest_tokens,
   ] = results.map((r) => r.data);
 
   return {
@@ -49,6 +51,7 @@ async function fetchStore() {
     notifications: notifications.map(normalizeNotification),
     messages: messages.map(normalizeIdRow),
     message_reads: message_reads.map(normalizeIdRow),
+    guest_tokens: guest_tokens.map(normalizeIdRow),
   };
 }
 

@@ -4,6 +4,7 @@ function u() {
 
 let state = {
   threads: [],
+  showPast: false,
 };
 
 function renderThreadAvatar(thread) {
@@ -23,17 +24,19 @@ function renderThreadRow(thread) {
   const route = `${escapeHtml(thread.origin)} → ${escapeHtml(formatDestination(thread))}`;
   const preview = thread.last_message
     ? escapeHtml(
-        thread.last_message.length > 80 ? `${thread.last_message.slice(0, 80)}…` : thread.last_message
+        thread.last_message.length > 80
+          ? `${thread.last_message.slice(0, 80)}…`
+          : thread.last_message
       )
     : '<span class="thread-empty-preview">No messages yet</span>';
 
   return `
-    <a class="thread-row${thread.unread_count > 0 ? " unread" : ""}" href="/message-thread.html?ride=${thread.ride_id}">
+    <a class="thread-row${thread.unread_count > 0 ? " unread" : ""}${thread.is_past ? " past" : ""}" href="/message-thread.html?ride=${thread.ride_id}">
       ${renderThreadAvatar(thread)}
       <div class="thread-info">
         <div class="thread-top-row">
           <strong>${escapeHtml(driverName)}</strong>
-          <span class="thread-date">${escapeHtml(formatDateValue(thread.start_date))}</span>
+          <span class="thread-date">${escapeHtml(formatDateValue(thread.start_date))}${thread.is_past ? ' <span class="thread-past-badge">Past</span>' : ""}</span>
         </div>
         <div class="thread-route">${route}</div>
         <div class="thread-preview">${preview}</div>
@@ -48,7 +51,9 @@ function render() {
     return;
   }
 
-  if (!state.threads.length) {
+  const active = state.threads.filter((t) => !t.is_past);
+
+  if (!active.length) {
     root.innerHTML = `
       <div class="empty-rides">
         <h2>No messages yet</h2>
@@ -57,7 +62,7 @@ function render() {
     return;
   }
 
-  root.innerHTML = `<div class="thread-list">${state.threads.map(renderThreadRow).join("")}</div>`;
+  root.innerHTML = `<div class="thread-list">${active.map(renderThreadRow).join("")}</div>`;
 }
 
 function showMessage(text, type = "error") {

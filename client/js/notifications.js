@@ -1,4 +1,4 @@
-const ALERT_AUTO_DISMISS_MS = 5000;
+const NOTIFICATION_AUTO_DISMISS_MS = 5000;
 const notificationItemTimers = new WeakMap();
 
 async function loadNotifications() {
@@ -95,7 +95,7 @@ function renderNotificationBanner(container, notifications) {
       itemEl,
       setTimeout(() => {
         dismissNotificationItem(container, itemEl);
-      }, ALERT_AUTO_DISMISS_MS)
+      }, NOTIFICATION_AUTO_DISMISS_MS)
     );
   });
 }
