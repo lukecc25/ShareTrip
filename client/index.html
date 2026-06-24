@@ -21,7 +21,7 @@
         Share rides with people headed your way.<br>
         Split fuel costs, reduce emissions, and make travel easier.
       </h3>
-      <a href="/sign-in.html" class="cta-btn">Get Started</a>
+      <a href="/sign-up.html" class="cta-btn">Get Started</a>
     </div>
   </section>
 
@@ -95,10 +95,6 @@
   <script>
     (async () => {
       await ShareTripNavbar.renderNavbar();
-      const session = await ShareTripAuth.getSession();
-      if (session.isAuthenticated) {
-        window.location.href = "/dashboard.html";
-      }
     })();
   </script>
 </body>
