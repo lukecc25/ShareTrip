@@ -111,7 +111,7 @@ async function renderNavbar(active = "") {
   const loginLink = document.createElement("a");
   loginLink.href = "/sign-in.html";
   loginLink.className = "login-btn";
-  loginLink.textContent = "Login / Sign Up";
+  loginLink.textContent = "Login";
   accountContainer.appendChild(loginLink);
 }
 
