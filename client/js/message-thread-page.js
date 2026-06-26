@@ -12,6 +12,7 @@ let state = {
   messages: [],
   pollTimer: null,
   editingDetails: false,
+  guestLinks: [],
 };
 
 function renderMessageBubble(message) {
@@ -54,6 +55,35 @@ function renderPassengerRow(p, isDriver) {
             : `<p class="pickup-spot">${p.pickup_spot ? escapeHtml(p.pickup_spot) : '<span class="pickup-empty">Not set yet</span>'}</p>`
         }
       </div>
+    </div>`;
+}
+
+// Guest link panel — visible to any participant who has guests.
+// Shows one copy-link button per guest that was added at join time.
+function renderGuestPanel() {
+  const { escapeHtml } = u();
+
+  if (!state.guestLinks.length) {
+    return "";
+  }
+
+  const linkItems = state.guestLinks.map((g) => {
+    const url = `${window.location.origin}/guest-chat.html?token=${encodeURIComponent(g.token)}`;
+    return `
+      <div class="guest-link-row">
+        <div class="guest-link-info">
+          <strong>${escapeHtml(g.guest_name)}</strong>
+          ${g.guest_phone ? `<span>${escapeHtml(g.guest_phone)}</span>` : ""}
+        </div>
+        <button type="button" class="secondary-button guest-copy-btn"
+          data-url="${escapeHtml(url)}">Copy link</button>
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="guest-panel">
+      <p class="ride-details-label"><i class="ti ti-link" aria-hidden="true"></i> Guest links — share these with your guests</p>
+      <div class="guest-link-list">${linkItems}</div>
     </div>`;
 }
 
@@ -105,48 +135,46 @@ function renderRideDetails() {
             ${state.passengers.map((p) => renderPassengerRow(p, isDriver)).join("")}
           </div>
         </div>
+        ${renderGuestPanel() ? `<div class="ride-details-cell ride-details-cell-full">${renderGuestPanel()}</div>` : ""}
       </div>
     </div>`;
 }
 
 function isScrolledNearBottom() {
   const thread = document.getElementById("chat-thread");
-  if (!thread) {
-    return true;
-  }
+  if (!thread) return true;
   return thread.scrollHeight - thread.scrollTop - thread.clientHeight < 80;
 }
 
 function scrollToBottom() {
   const thread = document.getElementById("chat-thread");
-  if (thread) {
-    thread.scrollTop = thread.scrollHeight;
-  }
+  if (thread) thread.scrollTop = thread.scrollHeight;
 }
 
 function renderMessages() {
   const thread = document.getElementById("chat-thread");
-  if (!thread) {
-    return;
-  }
+  if (!thread) return;
   const wasNearBottom = isScrolledNearBottom();
-  thread.innerHTML = state.messages.map(renderMessageBubble).join("");
-  if (wasNearBottom) {
-    scrollToBottom();
-  }
+  const messageHtml = state.messages.length
+    ? state.messages.map(renderMessageBubble).join("")
+    : '<div class="chat-empty-state">No messages yet. Say hi!</div>';
+  thread.innerHTML = messageHtml;
+  if (wasNearBottom) scrollToBottom();
 }
 
 function render() {
   const root = document.getElementById("chat-root");
-  if (!root) {
-    return;
-  }
+  if (!root) return;
+
+  const messageHtml = state.messages.length
+    ? state.messages.map(renderMessageBubble).join("")
+    : '<div class="chat-empty-state">No messages yet. Say hi!</div>';
 
   root.innerHTML = `
     <a href="/messages.html" class="back-link">Back to messages</a>
     ${state.ride ? renderRideDetails() : ""}
     <div class="chat-thread" id="chat-thread">
-      ${state.messages.map(renderMessageBubble).join("")}
+      ${messageHtml}
     </div>
     <form class="chat-composer" id="chat-composer">
       <textarea id="chat-input" placeholder="Write a message…" maxlength="1000" required></textarea>
@@ -164,7 +192,6 @@ function showMessage(text, type = "error") {
 
 async function saveDetails() {
   const isDriver = state.viewer?.is_driver ?? false;
-
   try {
     if (isDriver) {
       const departureTime = document.getElementById("departure-time-input")?.value.trim() ?? null;
@@ -204,9 +231,7 @@ function bindEvents() {
       event.preventDefault();
       const textarea = document.getElementById("chat-input");
       const body = textarea?.value.trim();
-      if (!body) {
-        return;
-      }
+      if (!body) return;
       textarea.disabled = true;
       try {
         await ShareTripApi.apiFetch(`/api/rides/${state.rideId}/messages`, {
@@ -239,6 +264,21 @@ function bindEvents() {
       }
     });
   }
+
+  // Copy link buttons
+  document.querySelectorAll(".guest-copy-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const url = btn.dataset.url;
+      try {
+        await navigator.clipboard.writeText(url);
+        btn.textContent = "Copied!";
+        setTimeout(() => { btn.textContent = "Copy link"; }, 2000);
+      } catch {
+        // Fallback for browsers that block clipboard
+        prompt("Copy this link and send it to your passenger:", url);
+      }
+    });
+  });
 }
 
 async function loadMessages() {
@@ -247,6 +287,7 @@ async function loadMessages() {
   state.viewer = result.viewer;
   state.passengers = result.passengers || [];
   state.messages = result.messages || [];
+  state.guestLinks = result.my_guest_tokens || [];
 }
 
 function startPolling() {
@@ -254,15 +295,14 @@ function startPolling() {
     try {
       await loadMessages();
       renderMessages();
-    } catch (error) {
+    } catch {
+      // Ignore polling errors silently.
     }
   }, POLL_INTERVAL_MS);
 }
 
 async function initMessageThreadPage() {
-  if (!(await ShareTripAuth.requireSignedIn())) {
-    return;
-  }
+  if (!(await ShareTripAuth.requireSignedIn())) return;
   await ShareTripAuth.requireProfile();
   await ShareTripNavbar.renderNavbar("messages");
 
@@ -284,9 +324,7 @@ async function initMessageThreadPage() {
 }
 
 window.addEventListener("beforeunload", () => {
-  if (state.pollTimer) {
-    clearInterval(state.pollTimer);
-  }
+  if (state.pollTimer) clearInterval(state.pollTimer);
 });
 
 document.addEventListener("DOMContentLoaded", () => {
