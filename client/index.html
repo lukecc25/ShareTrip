@@ -21,7 +21,7 @@
         Share rides with people headed your way.<br>
         Split fuel costs, reduce emissions, and make travel easier.
       </h3>
-      <a href="/sign-up.html" class="cta-btn">Get Started</a>
+      <a href="/sign-up.html" class="cta-btn" id="hero-cta">Get Started</a>
     </div>
   </section>
 
@@ -95,6 +95,14 @@
   <script>
     (async () => {
       await ShareTripNavbar.renderNavbar();
+      const cta = document.getElementById("hero-cta");
+      if (cta && window.ShareTripAuth) {
+        const session = await ShareTripAuth.getSession();
+        if (session.isAuthenticated) {
+          cta.href = "/dashboard.html";
+          cta.textContent = "Check Rides";
+        }
+      }
     })();
   </script>
 </body>

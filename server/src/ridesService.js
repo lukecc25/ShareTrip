@@ -919,6 +919,53 @@ async function ratePerson(rideId, raterUserId, ratedUserId, rating, comment, rol
   );
 }
 
+function formatRideDestination(ride) {
+  const destination = String(ride?.destination || "").trim();
+  const state = String(ride?.destination_state || "").trim();
+  if (!destination) {
+    return state;
+  }
+  if (!state) {
+    return destination;
+  }
+  return `${destination}, ${state}`;
+}
+
+function formatRideRoute(ride) {
+  const origin = String(ride?.origin || "").trim();
+  const destination = formatRideDestination(ride);
+  if (!origin && !destination) {
+    return "your ride";
+  }
+  if (!origin) {
+    return destination;
+  }
+  if (!destination) {
+    return origin;
+  }
+  return `${origin} to ${destination}`;
+}
+
+async function notifyDriverOfferPending(store, ride, driverUserId, offerId) {
+  const driver = findAccount(store, driverUserId);
+  const driverName = driver ? `${driver.fname} ${driver.lname}`.trim() : "A driver";
+  const routeLabel = formatRideRoute(ride);
+  await createNotification(
+    ride.owner_id,
+    `${driverName} offered to drive your ride (${routeLabel}).`,
+    "driver_offer_pending",
+    ride.id,
+    offerId
+  );
+  await createNotification(
+    driverUserId,
+    `Your offer to drive (${routeLabel}) is waiting for approval.`,
+    "driver_offer_waiting",
+    ride.id,
+    offerId
+  );
+}
+
 async function createNotification(userId, message, kind, rideId, offerId) {
   throwIfError(
     await getSupabase().from("notifications").insert({
@@ -931,6 +978,17 @@ async function createNotification(userId, message, kind, rideId, offerId) {
       created_at: now(),
     })
   );
+}
+
+async function deleteNotificationsForOffer(offerId) {
+  const result = await getSupabase()
+    .from("notifications")
+    .delete()
+    .eq("offer_id", offerId);
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
 }
 
 async function listPendingDriverOffers(rideId) {
@@ -951,6 +1009,28 @@ async function listPendingDriverOffers(rideId) {
     });
 }
 
+function enrichNotification(row, store, userId) {
+  const ride = row.ride_id ? findRide(store, row.ride_id) : null;
+  const offer = row.offer_id
+    ? store.driver_offers.find((o) => Number(o.id) === Number(row.offer_id))
+    : null;
+  const driver = offer ? findAccount(store, offer.driver_user_id) : null;
+  const canRespond =
+    row.kind === "driver_offer_pending" &&
+    offer?.status === "pending" &&
+    ride?.owner_id === userId;
+
+  return {
+    ...row,
+    ride_origin: ride?.origin ?? "",
+    ride_destination: ride ? formatRideDestination(ride) : "",
+    driver_fname: driver?.fname ?? "",
+    driver_lname: driver?.lname ?? "",
+    offer_status: offer?.status ?? null,
+    can_respond: canRespond ? 1 : 0,
+  };
+}
+
 async function listNotifications(userId, unreadOnly = true) {
   const store = await fetchStore();
   let rows = store.notifications.filter((n) => n.user_id === userId);
@@ -959,7 +1039,21 @@ async function listNotifications(userId, unreadOnly = true) {
   } else {
     rows = rows.slice(0, 50);
   }
-  return rows.sort((a, b) => b.created_at.localeCompare(a.created_at));
+  rows = rows.filter((row) => {
+    if (row.kind !== "driver_offer_pending" && row.kind !== "driver_offer_waiting") {
+      return true;
+    }
+    if (!row.offer_id) {
+      return true;
+    }
+    const offer = store.driver_offers.find(
+      (o) => Number(o.id) === Number(row.offer_id)
+    );
+    return offer?.status === "pending";
+  });
+  return rows
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .map((row) => enrichNotification(row, store, userId));
 }
 
 async function markNotificationsRead(userId, ids) {
@@ -973,6 +1067,22 @@ async function markNotificationsRead(userId, ids) {
   }
 
   const result = await query;
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+}
+
+async function deleteNotifications(userId, ids) {
+  if (!ids?.length) {
+    throw new Error("No notifications selected.");
+  }
+
+  const result = await getSupabase()
+    .from("notifications")
+    .delete()
+    .eq("user_id", userId)
+    .in("id", ids);
+
   if (result.error) {
     throw new Error(result.error.message);
   }
@@ -1018,6 +1128,7 @@ async function becomeDriver(rideId, userId) {
         .select("id, status")
         .single()
     );
+    await notifyDriverOfferPending(store, ride, userId, row.id);
     return row;
   }
 
@@ -1034,7 +1145,50 @@ async function becomeDriver(rideId, userId) {
       .select("id, status")
       .single()
   );
+  await notifyDriverOfferPending(store, ride, userId, row.id);
   return row;
+}
+
+async function cancelDriverOffer(rideId, userId) {
+  const store = await fetchStore();
+  const ride = findRide(store, rideId);
+  if (!ride || ride.ride_type !== "request") {
+    throw new Error("Driver offers are only available on ride requests.");
+  }
+
+  const offer = store.driver_offers.find(
+    (o) =>
+      Number(o.ride_id) === Number(rideId) &&
+      o.driver_user_id === userId &&
+      o.status === "pending"
+  );
+  if (!offer) {
+    throw new Error("You do not have a pending driver offer on this ride.");
+  }
+
+  const sb = getSupabase();
+  const routeLabel = formatRideRoute(ride);
+  const offerId = offer.id;
+  await deleteNotificationsForOffer(offerId);
+  const waitingCleanup = await sb
+    .from("notifications")
+    .delete()
+    .eq("user_id", userId)
+    .eq("ride_id", Number(rideId))
+    .eq("kind", "driver_offer_waiting");
+  if (waitingCleanup.error) {
+    throw new Error(waitingCleanup.error.message);
+  }
+  throwIfError(await sb.from("driver_offers").delete().eq("id", offerId));
+  await createNotification(
+    userId,
+    `Your pending offer to drive (${routeLabel}) has been cancelled.`,
+    "driver_offer_cancelled",
+    Number(rideId),
+    null
+  );
+
+  return { ok: true, message: "Your pending driver offer has been canceled." };
 }
 
 async function respondToDriverOffer(rideId, offerId, ownerId, accept) {
@@ -1141,7 +1295,9 @@ module.exports = {
   listPendingDriverOffers,
   listNotifications,
   markNotificationsRead,
+  deleteNotifications,
   becomeDriver,
+  cancelDriverOffer,
   respondToDriverOffer,
   resignAsDriver,
   removeAssignedDriver,
