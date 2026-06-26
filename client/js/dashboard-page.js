@@ -194,6 +194,15 @@ function visibleRides() {
     if (state.locationFilter.trim()) {
       rides = rides.filter(matchesLocationFilter);
     }
+    if (!state.showFull) {
+      rides = rides.filter((r) => {
+        // Hide offer rides that are full (seats === 0) unless showFull is on.
+        if (String(r.ride_type || "").toLowerCase() === "offer") {
+          return r.seats > 0 || r.is_owner === 1 || r.current_user_joined === 1;
+        }
+        return true;
+      });
+    }
     if (state.stateFilter) {
       rides = rides.filter(matchesStateFilter);
     }
@@ -557,6 +566,7 @@ function updateStaticChrome() {
     if (label) {
       const hasActiveFilters =
         state.offersOnly ||
+        state.showFull ||
         state.stateFilter ||
         state.locationFilter.trim() ||
         state.dateFrom.trim() ||
@@ -888,6 +898,17 @@ function bindOffersOnlyFilter() {
   });
 }
 
+function bindShowFullFilter() {
+  const filter = document.getElementById("show-full-filter");
+  if (!filter) return;
+  const checkbox = filter.querySelector('input[type="checkbox"]');
+  if (!checkbox) return;
+  checkbox.addEventListener("change", () => {
+    state.showFull = checkbox.checked;
+    renderRides();
+  });
+}
+
 function bindStateFilter() {
   const select = document.getElementById("state-filter-select");
   if (!select) return;
@@ -1053,6 +1074,7 @@ async function initDashboardPage() {
   bindRequestRideFilter();
   bindSameGenderFilter();
   bindOffersOnlyFilter();
+  bindShowFullFilter();
   bindStateFilter();
   bindLocationFilter();
   bindDateFilter();
