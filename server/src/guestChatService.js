@@ -2,7 +2,24 @@ const { randomBytes } = require("crypto");
 const { getSupabase } = require("./supabase");
 const { fetchStore } = require("./dataStore");
 const { now, throwIfError } = require("./dbUtils");
-const { getChatDriverId, isThreadParticipant } = require("./messagesService");
+
+// Inline helpers to avoid circular dependency with messagesService.
+function getChatDriverId(ride) {
+  return ride.ride_type === "offer" ? ride.owner_id : ride.assigned_driver_id;
+}
+
+function isThreadParticipant(ride, userId, store) {
+  if (!ride || !userId) return false;
+  if (ride.owner_id === userId) return true;
+  const driverId = getChatDriverId(ride);
+  if (driverId && driverId === userId) return true;
+  if (ride.ride_type === "offer") {
+    return store.passengers.some(
+      (p) => Number(p.ride_id) === Number(ride.id) && p.user_id === userId
+    );
+  }
+  return false;
+}
 
 const TOKEN_EXPIRY_DAYS = 7;
 

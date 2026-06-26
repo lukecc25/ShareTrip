@@ -151,10 +151,35 @@ async function listMessages(rideId, userId) {
     };
   });
 
+  const myGuestTokenSet = new Set(
+    (store.guest_tokens || [])
+      .filter((t) => t.created_by === userId)
+      .map((t) => t.token)
+  );
+
   const messages = store.messages
     .filter((m) => Number(m.ride_id) === Number(rideId))
     .sort((a, b) => a.created_at.localeCompare(b.created_at))
     .map((m) => {
+      if (m.guest_token) {
+        // Message sent by a guest via token link.
+        const guestToken = (store.guest_tokens || []).find(
+          (t) => t.token === m.guest_token
+        );
+        const isOwnGuest = myGuestTokenSet.has(m.guest_token);
+        return {
+          id: m.id,
+          ride_id: m.ride_id,
+          user_id: null,
+          body: m.body,
+          created_at: m.created_at,
+          fname: guestToken?.guest_name ?? "Guest",
+          lname: "",
+          is_own: false,
+          is_guest: true,
+          is_own_guest: isOwnGuest,
+        };
+      }
       const sender = findAccount(store, m.user_id);
       return {
         id: m.id,
@@ -165,6 +190,7 @@ async function listMessages(rideId, userId) {
         fname: sender?.fname ?? "",
         lname: sender?.lname ?? "",
         is_own: m.user_id === userId,
+        is_guest: false,
       };
     });
 

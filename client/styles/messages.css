@@ -145,10 +145,13 @@
     background: #f1f5f9;
     border-radius: 12px;
     color: #1e293b;
+    display: inline-block;
     font-size: 14px;
     line-height: 1.4;
     overflow-wrap: anywhere;
     padding: 10px 12px;
+    width: fit-content;
+    max-width: 100%;
 }
 
 .chat-message.own .chat-message-bubble {

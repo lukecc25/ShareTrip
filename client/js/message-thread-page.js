@@ -27,9 +27,13 @@ function renderMessageBubble(message) {
         minute: "2-digit",
       });
 
+  const displayName = message.is_guest
+    ? `${escapeHtml(message.fname)} (guest)`
+    : escapeHtml(message.fname);
+
   return `
     <div class="chat-message${message.is_own ? " own" : ""}">
-      ${message.is_own ? "" : `<div class="chat-message-author">${escapeHtml(message.fname)}</div>`}
+      ${message.is_own ? "" : `<div class="chat-message-author">${displayName}</div>`}
       <div class="chat-message-bubble">${escapeHtml(message.body)}</div>
       <div class="chat-message-time">${escapeHtml(timeLabel)}</div>
     </div>`;

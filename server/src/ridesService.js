@@ -392,8 +392,8 @@ async function joinRide(rideId, userId, options = {}) {
   for (const guest of guestDetails) {
     try {
       await createGuestToken(rideId, userId, guest.name, guest.phone || null);
-    } catch {
-      // Non-fatal: token generation failure should not block the join.
+    } catch (err) {
+      console.error("[guestToken] Failed to create token:", err.message);
     }
   }
 }
