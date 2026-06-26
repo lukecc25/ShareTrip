@@ -363,6 +363,7 @@ function render() {
           <div class="posted-by-row"><span>Posted by</span><div><strong>${escapeHtml(driverName)}</strong>${!isOwner ? renderViewProfileLink(ride.owner_id) : ""}</div></div>
           <div><span>Start</span><strong>${escapeHtml(formatDateValue(ride.start_date))}</strong></div>
           <div><span>End</span><strong>${escapeHtml(formatDateValue(ride.end_date))}</strong></div>
+          ${ride.departure_time ? `<div><span>Departure time</span><strong>${escapeHtml(ride.departure_time)}</strong></div>` : ""}
           <div><span>Trip</span><strong>${ride.roundtrip ? "Round trip" : "One way"}</strong></div>
           ${
             isOffer && !isOfferPending
@@ -423,14 +424,14 @@ function bindEvents(rideId) {
       try {
         if (action === "become-driver") {
           await ShareTripApi.apiFetch(`/api/rides/${targetRideId}/become-driver`, { method: "POST" });
-          window.location.href = `/ride-details.html?ride=${targetRideId}`;
+          window.location.href = `/ride-details.html?ride=${targetRideId}&driver_pending=1`;
           return;
         }
 
         if (action === "cancel-driver-offer") {
           if (!window.confirm("Cancel your pending driver offer?")) return;
           await ShareTripApi.apiFetch(`/api/rides/${targetRideId}/cancel-driver-offer`, { method: "POST" });
-          window.location.href = `/ride-details.html?ride=${targetRideId}`;
+          window.location.href = `/ride-details.html?ride=${targetRideId}&driver_offer_cancelled=1`;
           return;
         }
 
@@ -644,6 +645,14 @@ async function initRideDetailsPage() {
 
   if (query.has("commented")) {
     message = "Your comment has been posted.";
+  }
+  if (query.has("driver_pending")) {
+    message = "Your driver offer is pending approval.";
+    messageType = "success";
+  }
+  if (query.has("driver_offer_cancelled")) {
+    message = "Your pending offer to drive has been cancelled.";
+    messageType = "success";
   }
   if (query.has("offer_responded")) {
     message = "Driver accepted. The offer stays pending until the driver saves trip details.";
