@@ -104,6 +104,7 @@ async function renderNavbar(active = "") {
     // This is done after the links are rendered so the rest of the navbar
     // never waits on this request.
     updateNavUnreadDot();
+    updateNavNotificationBadge();
 
     return;
   }
@@ -113,6 +114,30 @@ async function renderNavbar(active = "") {
   loginLink.className = "login-btn";
   loginLink.textContent = "Login";
   accountContainer.appendChild(loginLink);
+}
+
+async function updateNavNotificationBadge() {
+  try {
+    const notifications = await ShareTripApi.apiFetch("/api/notifications");
+    const count = notifications.length;
+
+    document.querySelectorAll(".nav-notification-badge").forEach((badge) => {
+      if (count > 0) {
+        badge.hidden = false;
+        badge.textContent = count > 99 ? "99+" : String(count);
+        badge.setAttribute(
+          "aria-label",
+          `${count} unread notification${count === 1 ? "" : "s"}`
+        );
+      } else {
+        badge.hidden = true;
+        badge.textContent = "";
+        badge.setAttribute("aria-label", "No unread notifications");
+      }
+    });
+  } catch (error) {
+    // A failed unread check should never break the navbar.
+  }
 }
 
 async function updateNavUnreadDot() {
@@ -141,6 +166,9 @@ function createProfileAvatarLink(profile, active, extraClass = "") {
   profileLink.href = "/my-profile.html";
   profileLink.className = `nav-link nav-profile-link${extraClass}${active === "profile" ? " active" : ""}`;
 
+  const shell = document.createElement("span");
+  shell.className = "nav-profile-avatar-shell";
+
   const profileAvatar = document.createElement("span");
   profileAvatar.className = "nav-profile-avatar";
 
@@ -157,7 +185,15 @@ function createProfileAvatarLink(profile, active, extraClass = "") {
     showNavInitials(profileAvatar, profile);
   }
 
-  profileLink.appendChild(profileAvatar);
+  shell.appendChild(profileAvatar);
+
+  const badge = document.createElement("span");
+  badge.className = "nav-notification-badge";
+  badge.hidden = true;
+  badge.setAttribute("aria-label", "No unread notifications");
+  shell.appendChild(badge);
+
+  profileLink.appendChild(shell);
   return profileLink;
 }
 
@@ -208,7 +244,7 @@ function getProfileInitials(profile) {
   return initials || "ST";
 }
 
-window.ShareTripNavbar = { renderNavbar };
+window.ShareTripNavbar = { renderNavbar, updateNavNotificationBadge };
 
 function getActiveNavFromPath() {
   const path = window.location.pathname.replace(/\/$/, "");

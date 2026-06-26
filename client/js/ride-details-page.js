@@ -423,14 +423,14 @@ function bindEvents(rideId) {
       try {
         if (action === "become-driver") {
           await ShareTripApi.apiFetch(`/api/rides/${targetRideId}/become-driver`, { method: "POST" });
-          window.location.href = `/ride-details.html?ride=${targetRideId}&driver_pending=1`;
+          window.location.href = `/ride-details.html?ride=${targetRideId}`;
           return;
         }
 
         if (action === "cancel-driver-offer") {
           if (!window.confirm("Cancel your pending driver offer?")) return;
           await ShareTripApi.apiFetch(`/api/rides/${targetRideId}/cancel-driver-offer`, { method: "POST" });
-          window.location.href = `/ride-details.html?ride=${targetRideId}&driver_offer_cancelled=1`;
+          window.location.href = `/ride-details.html?ride=${targetRideId}`;
           return;
         }
 
@@ -644,14 +644,6 @@ async function initRideDetailsPage() {
 
   if (query.has("commented")) {
     message = "Your comment has been posted.";
-  }
-  if (query.has("driver_pending")) {
-    message = "Your driver offer is pending approval.";
-    messageType = "success";
-  }
-  if (query.has("driver_offer_cancelled")) {
-    message = "Your pending offer to drive has been cancelled.";
-    messageType = "success";
   }
   if (query.has("offer_responded")) {
     message = "Driver accepted. The offer stays pending until the driver saves trip details.";

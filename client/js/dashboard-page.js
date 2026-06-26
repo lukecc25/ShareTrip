@@ -10,7 +10,6 @@ const MESSAGES = {
   left: "You left the ride.",
   canceled: "Your ride has been canceled.",
   commented: "Your comment has been posted.",
-  driverOfferCancelled: "Your pending offer to drive has been cancelled.",
 };
 
 let state = {
@@ -68,13 +67,6 @@ function parseInitialState() {
   if (query.has("left")) showMessage("left");
   if (query.has("canceled")) showMessage("canceled");
   if (query.has("commented")) showMessage("commented");
-  if (query.has("driver_pending")) {
-    state.message = "Your driver offer is pending approval.";
-    state.messageType = "success";
-  }
-  if (query.has("driver_offer_cancelled")) {
-    showMessage("driverOfferCancelled");
-  }
 
   u().stripFlashQueryParams();
 }
@@ -973,7 +965,7 @@ function bindRideActions() {
           await ShareTripApi.apiFetch(`/api/rides/${rideId}/become-driver`, {
             method: "POST",
           });
-          window.location.href = `/dashboard.html?driver_pending=1&scope=${state.scope}`;
+          window.location.href = `/dashboard.html?scope=${state.scope}`;
           return;
         }
         if (action === "cancel-driver-offer") {
@@ -983,7 +975,7 @@ function bindRideActions() {
           await ShareTripApi.apiFetch(`/api/rides/${rideId}/cancel-driver-offer`, {
             method: "POST",
           });
-          window.location.href = `/dashboard.html?driver_offer_cancelled=1&scope=${state.scope}`;
+          window.location.href = `/dashboard.html?scope=${state.scope}`;
           return;
         }
         if (action === "accept-offer") {
