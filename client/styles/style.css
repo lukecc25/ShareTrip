@@ -591,6 +591,20 @@ body {
     font-weight: 600;
 }
 
+.site-footer a {
+    color: #bfdbfe;
+    display: inline-block;
+    font-size: 14px;
+    font-weight: 700;
+    margin-top: 8px;
+    text-decoration: none;
+}
+
+.site-footer a:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
 @media (max-width: 768px) {
     .navbar {
         grid-template-columns: 1fr auto;
