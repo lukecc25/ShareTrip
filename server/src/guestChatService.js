@@ -185,6 +185,41 @@ async function sendGuestMessage(token, body) {
   );
 }
 
+// Renews an existing guest token by pushing its expiry out another
+// TOKEN_EXPIRY_DAYS, so a previously-shared (now expired) link works again
+// without the driver having to send a brand new URL.
+async function renewGuestToken(rideId, requestingUserId, tokenId) {
+  const store = await fetchStore();
+  const ride = findRide(store, rideId);
+  if (!ride) {
+    throw new Error("Ride not found.");
+  }
+  if (!isThreadParticipant(ride, requestingUserId, store)) {
+    throw new Error("You do not have access to this ride.");
+  }
+
+  const row = (store.guest_tokens || []).find(
+    (t) =>
+      Number(t.id) === Number(tokenId) &&
+      Number(t.ride_id) === Number(rideId) &&
+      t.created_by === requestingUserId
+  );
+  if (!row) {
+    throw new Error("Guest link not found.");
+  }
+
+  const updated = throwIfError(
+    await getSupabase()
+      .from("guest_tokens")
+      .update({ expires_at: expiresAt() })
+      .eq("id", row.id)
+      .select("*")
+      .single()
+  );
+
+  return { token: updated.token, expires_at: updated.expires_at };
+}
+
 // Lists guest tokens for a ride. Each user only sees tokens they created.
 async function listGuestTokens(rideId, userId) {
   const store = await fetchStore();
@@ -210,4 +245,4 @@ async function listGuestTokens(rideId, userId) {
     }));
 }
 
-module.exports = { createGuestToken, resolveGuestToken, sendGuestMessage, listGuestTokens };
+module.exports = { createGuestToken, resolveGuestToken, sendGuestMessage, listGuestTokens, renewGuestToken };

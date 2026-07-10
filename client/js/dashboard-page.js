@@ -595,23 +595,31 @@ function updateStaticChrome() {
   const filterPanel = document.getElementById("advanced-filter-panel");
   if (filterPanel) {
     filterPanel.hidden = !state.filtersVisible || !showAllFilters;
+    
+  const ridefilterPanelEl = document.getElementById("ride-filter-panel");
+  if (ridefilterPanelEl) {
+    ridefilterPanelEl.classList.toggle("filters-open", state.filtersVisible && showAllFilters);
+  }
   }
 
-  // Update the toggle button state.
+    // Update the toggle button state.
   const filterToggleBtn = document.getElementById("filter-toggle-btn");
   if (filterToggleBtn) {
     filterToggleBtn.hidden = !showAllFilters;
     filterToggleBtn.classList.toggle("active", state.filtersVisible);
     const label = document.getElementById("filter-toggle-label");
     if (label) {
-      const hasActiveFilters =
-        state.offersOnly ||
-        state.showFull ||
-        state.stateFilter ||
-        state.locationFilter.trim() ||
-        state.dateFrom.trim() ||
-        state.dateTo.trim();
-      label.textContent = hasActiveFilters ? "Filters (on)" : "Filters";
+        const activeFilterCount = [
+          state.offersOnly,
+          state.showFull,
+          state.hideRequestRides,
+          state.sameGenderOnly,
+          state.stateFilter,
+          state.locationFilter.trim(),
+          state.dateFrom.trim(),
+          state.dateTo.trim(),
+        ].filter(Boolean).length;
+      label.textContent = activeFilterCount > 0 ? `Filters (${activeFilterCount})` : "Filters";
     }
   }
 
@@ -981,7 +989,7 @@ function bindShowFullFilter() {
   if (!checkbox) return;
   checkbox.addEventListener("change", () => {
     state.showFull = checkbox.checked;
-    renderRides();
+    render();
   });
 }
 
@@ -990,7 +998,7 @@ function bindStateFilter() {
   if (!select) return;
   select.addEventListener("change", () => {
     state.stateFilter = select.value;
-    renderRides();
+    render();
   });
 }
 
@@ -1001,7 +1009,7 @@ function bindLocationFilter() {
   }
   locationSelect.addEventListener("change", () => {
     state.locationFilter = locationSelect.value;
-    renderRides();
+    render();
   });
 }
 
@@ -1022,18 +1030,28 @@ function bindDateFilter() {
       renderRides();
     });
   }
-  if (clearBtn) {
+    if (clearBtn) {
     clearBtn.addEventListener("click", () => {
       state.dateFrom = "";
       state.dateTo = "";
       state.locationFilter = "";
       state.offersOnly = false;
+      state.stateFilter = "";
+      state.showFull = false;
+      state.hideRequestRides = false;
+      state.sameGenderOnly = false;
       if (fromInput) fromInput.value = "";
       if (toInput) toInput.value = "";
       const locSelect = document.getElementById("location-filter-select");
       if (locSelect) locSelect.value = "";
+      const stateSelect = document.getElementById("state-filter-select");
+      if (stateSelect) stateSelect.value = "";
       const offersCheckbox = document.querySelector("#offers-only-filter input");
       if (offersCheckbox) offersCheckbox.checked = false;
+      const showFullCheckbox = document.querySelector("#show-full-filter input");
+      if (showFullCheckbox) showFullCheckbox.checked = false;
+      u().saveHideRequestRidesPreference(false);
+      u().saveSameGenderOnlyPreference(false);
       render();
     });
   }

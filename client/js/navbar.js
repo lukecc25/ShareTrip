@@ -106,7 +106,7 @@ async function renderNavbar(active = "") {
     // Fetch the unread status and add a red dot next to Messages if needed.
     // This is done after the links are rendered so the rest of the navbar
     // never waits on this request.
-    updateNavUnreadDot();
+    updateNavMessagesBadge();
     updateNavNotificationBadge();
 
     return;
@@ -173,21 +173,29 @@ async function updateNavNotificationBadge() {
   }
 }
 
-async function updateNavUnreadDot() {
+async function updateNavMessagesBadge() {
   try {
     const summary = await ShareTripApi.apiFetch("/api/messages/unread-summary");
     const messagesLink = document.querySelector('[data-nav="messages"]');
     if (!messagesLink) {
       return;
     }
-    const existingDot = messagesLink.querySelector(".nav-unread-dot");
-    if (summary.has_unread && !existingDot) {
-      const dot = document.createElement("span");
-      dot.className = "nav-unread-dot";
-      dot.setAttribute("aria-label", "Unread messages");
-      messagesLink.appendChild(dot);
-    } else if (!summary.has_unread && existingDot) {
-      existingDot.remove();
+    let badge = messagesLink.querySelector(".nav-message-badge");
+    if (!badge) {
+      badge = document.createElement("span");
+      badge.className = "nav-message-badge";
+      badge.hidden = true;
+      messagesLink.appendChild(badge);
+    }
+    const count = summary.unread_count || 0;
+    if (count > 0) {
+      badge.hidden = false;
+      badge.textContent = count > 99 ? "99+" : String(count);
+      badge.setAttribute("aria-label", `${count} unread message${count === 1 ? "" : "s"}`);
+    } else {
+      badge.hidden = true;
+      badge.textContent = "";
+      badge.setAttribute("aria-label", "No unread messages");
     }
   } catch (error) {
     // A failed unread check should never break the navbar.

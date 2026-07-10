@@ -529,6 +529,10 @@ body.donation-body {
     padding: 16px;
 }
 
+.ride-filter-panel.filters-open .ride-filter-tabs {
+    align-self: start;
+}
+
 .ride-filter-tabs {
     background: #f1f5f9;
     border-radius: 8px;
@@ -1941,6 +1945,11 @@ body.donation-body {
     font-weight: 700;
     padding: 0;
     text-decoration: underline;
+}
+
+.filter-group-checkboxes .clear-filters-btn {
+    margin-top: 6px;
+    text-align: left;
 }
  
 .clear-filters-btn:hover {

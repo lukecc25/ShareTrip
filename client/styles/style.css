@@ -245,6 +245,36 @@ body {
     display: none;
 }
 
+/* Red numbered badge for the "Messages" nav bar link when there are unread chats. */
+[data-nav="messages"] {
+    display: inline-flex;
+    position: relative;
+}
+
+.nav-message-badge {
+    align-items: center;
+    background: #ef4444;
+    border: 2px solid white;
+    border-radius: 999px;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.18);
+    color: white;
+    display: inline-flex;
+    font-size: 11px;
+    font-weight: 800;
+    height: 18px;
+    justify-content: center;
+    line-height: 1;
+    min-width: 18px;
+    padding: 0 4px;
+    position: absolute;
+    right: -14px;
+    top: -8px;
+}
+
+.nav-message-badge[hidden] {
+    display: none;
+}
+
 .nav-profile-avatar {
     align-items: center;
     border-radius: 50%;
