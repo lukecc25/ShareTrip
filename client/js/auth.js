@@ -5,16 +5,30 @@ async function getSession() {
   return response.json();
 }
 
-async function requireSignedIn(redirectTo = "/sign-in.html") {
+function currentReturnTo() {
+  return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+}
+
+function signInRedirectUrl(message = "Sign in to continue.", returnTo = currentReturnTo()) {
+  const params = new URLSearchParams();
+  params.set("message", message);
+  if (returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")) {
+    params.set("returnTo", returnTo);
+  }
+  return `/sign-in.html?${params.toString()}`;
+}
+
+async function requireSignedIn(redirectTo = null) {
   const session = await getSession();
   if (!session.isAuthenticated) {
-    window.location.href = redirectTo;
+    window.location.href =
+      redirectTo || signInRedirectUrl("Sign in to use that part of ShareTrip.");
     return false;
   }
   return true;
 }
 
-async function requireProfile(redirectTo = "/sign-in.html") {
+async function requireProfile(redirectTo = null) {
   const signedIn = await requireSignedIn(redirectTo);
   if (!signedIn) {
     return false;
@@ -23,13 +37,13 @@ async function requireProfile(redirectTo = "/sign-in.html") {
   try {
     const data = await ShareTripApi.apiFetch("/api/users/me/profile");
     if (!data.profile) {
-      window.location.href = "/sign-in.html";
+      window.location.href = signInRedirectUrl("Sign in to finish setting up your profile.");
       return false;
     }
     return data.profile;
   } catch (error) {
     if (error.status === 401 || error.status === 404) {
-      window.location.href = "/sign-in.html";
+      window.location.href = signInRedirectUrl("Sign in to continue.");
       return false;
     }
     throw error;
@@ -48,5 +62,6 @@ window.ShareTripAuth = {
   getSession,
   requireSignedIn,
   requireProfile,
+  signInRedirectUrl,
   logout,
 };

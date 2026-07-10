@@ -45,16 +45,23 @@
     (async () => {
       await ShareTripNavbar.renderNavbar();
 
+      const messageEl = document.getElementById("auth-message");
+      const params = new URLSearchParams(window.location.search);
+      const authMessage = params.get("message") || params.get("error");
+      const returnTo = params.get("returnTo");
+      const safeReturnTo =
+        returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")
+          ? returnTo
+          : "/dashboard.html";
+
       const session = await ShareTripAuth.getSession();
       if (session.isAuthenticated) {
-        window.location.href = "/dashboard.html";
+        window.location.href = safeReturnTo;
         return;
       }
 
-      const messageEl = document.getElementById("auth-message");
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("error")) {
-        messageEl.textContent = params.get("error");
+      if (authMessage) {
+        messageEl.textContent = authMessage;
         messageEl.hidden = false;
       }
 
@@ -77,7 +84,7 @@
           if (!response.ok) {
             throw new Error(data.error || "Login failed.");
           }
-          window.location.href = "/dashboard.html";
+          window.location.href = safeReturnTo;
         } catch (error) {
           messageEl.textContent = error.message;
           messageEl.className = "message error";
