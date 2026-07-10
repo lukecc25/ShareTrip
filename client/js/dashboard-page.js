@@ -22,6 +22,7 @@ let state = {
   hideRequestRides: false,
   sameGenderOnly: false,
   offersOnly: false,
+  showFull: false,
   locationFilter: "",  // state name, "Other", or "" for all
   dateFrom: "",
   dateTo: "",
@@ -170,7 +171,15 @@ function matchesStateFilter(ride) {
   return rideDestinationMatchesState(ride, state.stateFilter);
 }
 
-function visibleRides() {
+function isFullOfferRide(ride) {
+  // An offer ride counts as "full" (0 seats left) unless the viewer owns it or already joined it.
+  if (String(ride.ride_type || "").toLowerCase() !== "offer") {
+    return false;
+  }
+  return !(ride.seats > 0 || ride.is_owner === 1 || ride.current_user_joined === 1);
+}
+
+function ridesBeforeFullFilter() {
   let rides = state.rides;
 
   if (state.scope === "all") {
@@ -186,15 +195,6 @@ function visibleRides() {
     if (state.locationFilter.trim()) {
       rides = rides.filter(matchesLocationFilter);
     }
-    if (!state.showFull) {
-      rides = rides.filter((r) => {
-        // Hide offer rides that are full (seats === 0) unless showFull is on.
-        if (String(r.ride_type || "").toLowerCase() === "offer") {
-          return r.seats > 0 || r.is_owner === 1 || r.current_user_joined === 1;
-        }
-        return true;
-      });
-    }
     if (state.stateFilter) {
       rides = rides.filter(matchesStateFilter);
     }
@@ -207,6 +207,21 @@ function visibleRides() {
   }
 
   return rides;
+}
+
+function visibleRides() {
+  const rides = ridesBeforeFullFilter();
+  if (state.scope === "all" && !state.showFull) {
+    return rides.filter((r) => !isFullOfferRide(r));
+  }
+  return rides;
+}
+
+function hiddenFullRidesCount() {
+  if (state.scope !== "all" || state.showFull) {
+    return 0;
+  }
+  return ridesBeforeFullFilter().filter(isFullOfferRide).length;
 }
 
 function emptyRidesMessage() {
@@ -636,11 +651,13 @@ function renderRides() {
   }
 
   const rides = visibleRides();
+  const banner = renderFullRidesBanner();
 
   if (rides.length > 0) {
-    container.innerHTML = `<section class="ride-grid">${rides.map(renderRideCard).join("")}</section>`;
+    container.innerHTML = `${banner}<section class="ride-grid">${rides.map(renderRideCard).join("")}</section>`;
   } else {
     container.innerHTML = `
+      ${banner}
       <section class="empty-rides">
         <h2>No rides found</h2>
         <p>${emptyRidesMessage()}</p>
@@ -648,6 +665,35 @@ function renderRides() {
   }
 
   bindRideActions();
+  bindFullRidesBanner();
+}
+
+function renderFullRidesBanner() {
+  const hiddenCount = hiddenFullRidesCount();
+  if (hiddenCount === 0) {
+    return "";
+  }
+  const rideWord = hiddenCount === 1 ? "ride is" : "rides are";
+  return `
+    <div class="full-rides-banner" id="full-rides-banner">
+      <span>${hiddenCount} full ${rideWord} hidden.</span>
+      <button type="button" id="show-full-rides-btn">Show full rides</button>
+    </div>`;
+}
+
+function bindFullRidesBanner() {
+  const btn = document.getElementById("show-full-rides-btn");
+  if (!btn) {
+    return;
+  }
+  btn.addEventListener("click", () => {
+    state.showFull = true;
+    const checkbox = document.querySelector("#show-full-filter input[type='checkbox']");
+    if (checkbox) {
+      checkbox.checked = true;
+    }
+    renderRides();
+  });
 }
 
 function renderForm() {
