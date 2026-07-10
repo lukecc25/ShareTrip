@@ -15,8 +15,8 @@ router.get("/threads", requireApiAuth, async (req, res) => {
 
 router.get("/unread-summary", requireApiAuth, async (req, res) => {
   try {
-    const hasUnread = await messagesService.hasUnreadMessages(req.userId);
-    res.json({ has_unread: hasUnread });
+    const unreadCount = await messagesService.getUnreadMessageCount(req.userId);
+    res.json({ has_unread: unreadCount > 0, unread_count: unreadCount });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

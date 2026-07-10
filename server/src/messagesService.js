@@ -111,9 +111,9 @@ async function listThreadsForUser(userId) {
   return threads;
 }
 
-async function hasUnreadMessages(userId) {
+async function getUnreadMessageCount(userId) {
   const threads = await listThreadsForUser(userId);
-  return threads.some((thread) => thread.unread_count > 0);
+  return threads.reduce((sum, thread) => sum + thread.unread_count, 0);
 }
 
 async function listMessages(rideId, userId) {
@@ -210,9 +210,11 @@ async function listMessages(rideId, userId) {
       (t) => Number(t.ride_id) === Number(rideId) && t.created_by === userId
     )
     .map((t) => ({
+      id: t.id,
       guest_name: t.guest_name,
       guest_phone: t.guest_phone || null,
       token: t.token,
+      expires_at: t.expires_at,
     }));
 
   return {
@@ -333,7 +335,7 @@ async function updatePickupSpot(rideId, passengerUserId, requestingUserId, picku
 module.exports = {
   isThreadParticipant,
   listThreadsForUser,
-  hasUnreadMessages,
+  getUnreadMessageCount,
   listMessages,
   sendMessage,
   updateRideDetails,
