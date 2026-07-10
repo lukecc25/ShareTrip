@@ -649,8 +649,7 @@ function renderNotificationsSection() {
       </label>`
     : "";
 
-  const notificationsToggle = `<button type="button" class="profile-section-toggle" data-action="toggle-notifications" aria-expanded="${state.notificationsExpanded}" aria-controls="profile-notifications-panel">
-      <span>${state.notificationsExpanded ? "Hide notifications" : "Show notifications"}</span>
+  const notificationsToggle = `<button type="button" class="profile-section-toggle" data-action="toggle-notifications" aria-expanded="${state.notificationsExpanded}" aria-controls="profile-notifications-panel" aria-label="${state.notificationsExpanded ? "Hide notifications" : "Show notifications"}">
       <span class="profile-section-toggle-chevron${state.notificationsExpanded ? " is-open" : ""}" aria-hidden="true">▼</span>
     </button>`;
 
@@ -690,8 +689,7 @@ function renderProfilePage(data) {
   const tripsHeading = state.isOwnProfile ? "Trip history" : "Past trips";
   const tripHistoryToggle =
     tripHistory.length > 0
-      ? `<button type="button" class="profile-section-toggle" data-action="toggle-trip-history" aria-expanded="${state.tripHistoryExpanded}" aria-controls="trip-history-panel">
-          <span>${state.tripHistoryExpanded ? "Hide past rides" : "Show past rides"}</span>
+      ? `<button type="button" class="profile-section-toggle" data-action="toggle-trip-history" aria-expanded="${state.tripHistoryExpanded}" aria-controls="trip-history-panel" aria-label="${state.tripHistoryExpanded ? "Hide past rides" : "Show past rides"}">
           <span class="profile-section-toggle-chevron${state.tripHistoryExpanded ? " is-open" : ""}" aria-hidden="true">▼</span>
         </button>`
       : "";

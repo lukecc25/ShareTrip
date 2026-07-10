@@ -86,6 +86,7 @@ const DARK_THEME_CSS = `
 [data-theme="dark"] .profile-name,
 [data-theme="dark"] .profile-section-header h2,
 [data-theme="dark"] .donation-hero h1,
+[data-theme="dark"] .feedback-hero h1,
 [data-theme="dark"] .messages-header h1,
 [data-theme="dark"] .thread-header h1,
 [data-theme="dark"] .ride-details-header h1 {
@@ -247,6 +248,15 @@ const DARK_THEME_CSS = `
     color: #f1f5f9;
 }
 
+[data-theme="dark"] select option {
+    background: #243447;
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .field-optional {
+    color: #94a3b8;
+}
+
 [data-theme="dark"] input::placeholder,
 [data-theme="dark"] textarea::placeholder {
     color: #94a3b8;
@@ -261,7 +271,6 @@ const DARK_THEME_CSS = `
 
 [data-theme="dark"] .secondary-button,
 [data-theme="dark"] .filter-toggle-btn,
-[data-theme="dark"] .profile-section-toggle,
 [data-theme="dark"] .clear-search-link,
 [data-theme="dark"] .cancel-form-link,
 [data-theme="dark"] .details-link,
@@ -274,8 +283,7 @@ const DARK_THEME_CSS = `
 }
 
 [data-theme="dark"] .secondary-button:hover,
-[data-theme="dark"] .filter-toggle-btn:hover,
-[data-theme="dark"] .profile-section-toggle:hover {
+[data-theme="dark"] .filter-toggle-btn:hover {
     background: #334155;
     color: #eff6ff;
 }
@@ -371,6 +379,7 @@ const DARK_THEME_CSS = `
 [data-theme="dark"] .how-it-works-page,
 [data-theme="dark"] .how-it-works-content,
 [data-theme="dark"] .donation-page,
+[data-theme="dark"] .feedback-page,
 [data-theme="dark"] .info-page {
     background: #0f172a;
     color: #e2e8f0;
@@ -409,6 +418,11 @@ const DARK_THEME_CSS = `
     border-color: #334155;
 }
 
+[data-theme="dark"] .chat-composer {
+    background: #1e293b;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
+}
+
 [data-theme="dark"] .chat-message.other {
     background: #243447;
     color: #e2e8f0;
@@ -436,11 +450,13 @@ const DARK_THEME_CSS = `
 }
 
 [data-theme="dark"] .donation-form label,
+[data-theme="dark"] .feedback-form label,
 [data-theme="dark"] .donation-amounts legend,
 [data-theme="dark"] .donation-history-item span,
 [data-theme="dark"] .donation-history-item small,
 [data-theme="dark"] .donation-history-item p,
 [data-theme="dark"] .donation-hero p:not(.eyebrow),
+[data-theme="dark"] .feedback-hero p:not(.eyebrow),
 [data-theme="dark"] .ride-search-form label,
 [data-theme="dark"] .form-panel-header p,
 [data-theme="dark"] .cancel-form-link,
@@ -562,6 +578,118 @@ const DARK_THEME_CSS = `
     color: #e2e8f0;
 }
 
+[data-theme="dark"] .profile-hero-info .profile-name,
+[data-theme="dark"] .profile-edit-header h2,
+[data-theme="dark"] .profile-section .profile-section-header h2 {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .profile-rating-summary {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .profile-rating-summary strong {
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .profile-stats span {
+    background: #334155;
+    border-color: #475569;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .profile-gender {
+    background: #334155;
+    border-color: #475569;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .able-driver-status.able-driver {
+    background: rgba(34, 197, 94, 0.2);
+    border-color: rgba(34, 197, 94, 0.35);
+    color: #86efac;
+}
+
+[data-theme="dark"] .able-driver-status.not-able-driver {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: rgba(251, 191, 36, 0.4);
+    color: #fde68a;
+}
+
+[data-theme="dark"] .profile-section-header span {
+    background: #334155;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .profile-section-toggle {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .profile-section-toggle:hover {
+    background: transparent;
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .profile-notification-header-btn {
+    background: #243447;
+    border: 1px solid #475569;
+    color: #dbeafe;
+}
+
+[data-theme="dark"] .profile-notification-header-btn:hover:not(:disabled) {
+    background: #334155;
+    color: #eff6ff;
+}
+
+[data-theme="dark"] .profile-notification-body p {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .review-card-top strong {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .trip-role-badge {
+    background: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .vehicle-details-section {
+    border-top-color: #475569;
+}
+
+[data-theme="dark"] .vehicle-details-section h3 {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .vehicle-details-hint {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .profile-photo-upload,
+[data-theme="dark"] .profile-photo-adjust {
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .profile-photo-remove {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .profile-photo-remove:hover {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .profile-photo-editor-dialog {
+    background: #1e293b;
+    border: 1px solid #334155;
+}
+
+[data-theme="dark"] .profile-photo-editor-dialog h3 {
+    color: #f1f5f9;
+}
+
 [data-theme="dark"] .messages-empty,
 [data-theme="dark"] .messages-empty p,
 [data-theme="dark"] .thread-date,
@@ -590,6 +718,118 @@ const DARK_THEME_CSS = `
 
 [data-theme="dark"] .passenger-count-pill {
     background: #334155;
+}
+
+[data-theme="dark"] .thread-row {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .thread-row.unread {
+    border-color: #3b82f6;
+}
+
+[data-theme="dark"] .thread-avatar-fallback {
+    background: #334155;
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .thread-past-badge {
+    background: #334155;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .empty-rides {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .empty-rides h2 {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .empty-rides p {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .full-rides-banner {
+    background: rgba(30, 58, 95, 0.65);
+    border-color: #475569;
+    color: #dbeafe;
+}
+
+[data-theme="dark"] .full-rides-banner button {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .full-rides-banner button:hover {
+    background: #1d4ed8;
+}
+
+[data-theme="dark"] .ride-detail-card {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .ride-detail-card-header {
+    border-bottom-color: #475569;
+}
+
+[data-theme="dark"] .ride-details-cell {
+    border-color: #475569;
+}
+
+[data-theme="dark"] .ride-details-label {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .ride-details-value {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .ride-details-empty {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .pickup-avatar {
+    background: #334155;
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .pickup-name {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .pickup-spot {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .guest-link-row {
+    background: #243447;
+    border-color: #475569;
+}
+
+[data-theme="dark"] .guest-link-info strong {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .past-threads-toggle {
+    border-color: #475569;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .past-threads-toggle:hover {
+    background: #243447;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .threads-empty-note {
+    color: #cbd5e1;
 }
 
 [data-theme="dark"] .field-hint {
