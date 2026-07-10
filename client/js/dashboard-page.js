@@ -588,7 +588,8 @@ function updateStaticChrome() {
     clearSearch.hidden = true;
   }
 
-  const showAllFilters = state.scope === "all" && state.isAuthenticated;
+  const showAllFilters = state.scope === "all";
+  const showMemberFilters = showAllFilters && state.isAuthenticated;
 
   // Toggle filter panel visibility.
   const filterPanel = document.getElementById("advanced-filter-panel");
@@ -624,8 +625,8 @@ function updateStaticChrome() {
 
   const requestFilter = document.getElementById("hide-request-rides-filter");
   if (requestFilter) {
-    requestFilter.hidden = !showAllFilters;
-    if (showAllFilters) {
+    requestFilter.hidden = !showMemberFilters;
+    if (showMemberFilters) {
       const checkbox = requestFilter.querySelector('input[type="checkbox"]');
       if (checkbox) {
         if (!u().isAbleDriver(state.profile)) {
@@ -640,8 +641,8 @@ function updateStaticChrome() {
 
   const genderFilter = document.getElementById("same-gender-only-filter");
   if (genderFilter) {
-    genderFilter.hidden = !showAllFilters;
-    if (showAllFilters) {
+    genderFilter.hidden = !showMemberFilters;
+    if (showMemberFilters) {
       const checkbox = genderFilter.querySelector('input[type="checkbox"]');
       if (checkbox) {
         checkbox.checked = state.sameGenderOnly;

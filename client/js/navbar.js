@@ -13,6 +13,7 @@ async function renderNavbar(active = "") {
         <div class="logo-text">Share<span>Trip</span></div>
       </a>
       <div class="nav-mobile-actions">
+        <div id="nav-mobile-theme" class="nav-mobile-theme"></div>
         <div id="nav-mobile-profile" class="nav-mobile-profile"></div>
         <button id="nav-menu-toggle" class="nav-menu-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false">
           <span></span>
@@ -96,9 +97,11 @@ async function renderNavbar(active = "") {
     primaryContainer.appendChild(mobileProfileLink);
     accountContainer.appendChild(profileLink);
     accountContainer.appendChild(logoutBtn);
+    placeThemeToggleBefore(accountContainer, profileLink);
     if (mobileProfileContainer) {
       mobileProfileContainer.appendChild(mobileProfileIconLink);
     }
+    window.ShareTripTheme?.mountThemeToggle?.(document.getElementById("nav-mobile-theme"));
 
     // Fetch the unread status and add a red dot next to Messages if needed.
     // This is done after the links are rendered so the rest of the navbar
@@ -133,6 +136,17 @@ async function renderNavbar(active = "") {
   loginLink.className = "login-btn";
   loginLink.textContent = "Login";
   accountContainer.appendChild(loginLink);
+  placeThemeToggleBefore(accountContainer, loginLink);
+  window.ShareTripTheme?.mountThemeToggle?.(document.getElementById("nav-mobile-theme"));
+}
+
+function placeThemeToggleBefore(container, beforeNode) {
+  if (!container || !beforeNode || !window.ShareTripTheme?.createThemeToggleButton) {
+    return;
+  }
+
+  container.querySelector(".theme-toggle-btn")?.remove();
+  container.insertBefore(window.ShareTripTheme.createThemeToggleButton(), beforeNode);
 }
 
 async function updateNavNotificationBadge() {
@@ -251,7 +265,10 @@ function renderFooter() {
     document.body.appendChild(footer);
   }
 
-  footer.innerHTML = `<p>&copy; ${year} ShareTrip. All rights reserved.</p>`;
+  footer.innerHTML = `
+    <p>&copy; ${year} ShareTrip. All rights reserved.</p>
+    <a href="/feedback.html">Send Feedback</a>
+  `;
 }
 
 function genderClass(gender) {

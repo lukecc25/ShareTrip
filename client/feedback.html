@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="/js/theme.js"></script>
+  <title>Send Feedback | ShareTrip</title>
+  <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/style.css">
+  <link rel="stylesheet" href="/styles/dashboard.css">
+</head>
+<body class="dashboard-body">
+  <div id="navbar-root"></div>
+  <div id="feedback-message" class="dashboard-message site-fixed-alert" hidden></div>
+
+  <main class="feedback-page">
+    <a href="/dashboard.html" class="back-link">Back to Ride Board</a>
+
+    <section class="detail-card feedback-hero">
+      <div>
+        <p class="eyebrow">ShareTrip Feedback</p>
+        <h1>Send Feedback</h1>
+        <p>Tell us what felt confusing, what is worth improving, or what you enjoyed about the site.</p>
+      </div>
+    </section>
+
+    <section class="detail-card detail-section">
+      <form class="feedback-form" id="feedbackForm">
+        <label>
+          Feedback type
+          <select name="type" required>
+            <option value="Suggestion">Suggestion</option>
+            <option value="Confusing experience">Confusing experience</option>
+            <option value="What I enjoyed">What I enjoyed</option>
+            <option value="Other">Other</option>
+          </select>
+        </label>
+
+        <label>
+          Message
+          <textarea name="message" rows="7" maxlength="2000" required placeholder="What happened? What should work differently?"></textarea>
+        </label>
+
+        <label>
+          Email <span class="field-optional">(optional)</span>
+          <input name="email" type="email" maxlength="120" placeholder="name@example.com">
+        </label>
+
+        <input type="hidden" name="page" id="feedback-page-source">
+
+        <button type="submit" class="primary-small-button">Send Feedback</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script src="/js/feedback-page.js"></script>
+</body>
+</html>

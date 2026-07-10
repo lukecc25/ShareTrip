@@ -589,27 +589,26 @@
 
 .profile-section-toggle {
     align-items: center;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    color: #475569;
+    background: transparent;
+    border: none;
+    color: #64748b;
     cursor: pointer;
     display: inline-flex;
     font: inherit;
-    font-size: 13px;
-    font-weight: 600;
-    gap: 6px;
-    padding: 6px 12px;
+    height: auto;
+    justify-content: center;
+    padding: 4px;
+    width: auto;
 }
 
 .profile-section-toggle:hover {
-    background: #f1f5f9;
-    color: #334155;
+    background: transparent;
+    color: #2563eb;
 }
 
 .profile-section-toggle-chevron {
     display: inline-block;
-    font-size: 10px;
+    font-size: 14px;
     line-height: 1;
     transition: transform 0.2s ease;
 }
