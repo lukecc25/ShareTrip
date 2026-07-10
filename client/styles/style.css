@@ -118,6 +118,48 @@ body {
 
 .nav-mobile-actions {
     display: none;
+    align-items: center;
+    gap: 10px;
+}
+
+.nav-mobile-theme {
+    display: flex;
+    align-items: center;
+}
+
+.theme-toggle-btn {
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    cursor: pointer;
+    display: inline-flex;
+    flex-shrink: 0;
+    height: 44px;
+    justify-content: center;
+    padding: 0;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    width: 44px;
+}
+
+.theme-toggle-btn:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    transform: translateY(-1px);
+}
+
+.theme-toggle-icon {
+    align-items: center;
+    display: inline-flex;
+    justify-content: center;
+    line-height: 1;
+}
+
+.theme-toggle-btn img {
+    display: block;
+    height: 26px;
+    object-fit: contain;
+    width: 26px;
 }
 
 .nav-menu-toggle {
@@ -676,6 +718,10 @@ body {
     }
 
     .nav-account .nav-profile-link {
+        display: none;
+    }
+
+    .nav-account .theme-toggle-btn {
         display: none;
     }
 
