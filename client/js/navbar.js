@@ -257,7 +257,10 @@ function renderFooter() {
     document.body.appendChild(footer);
   }
 
-  footer.innerHTML = `<p>&copy; ${year} ShareTrip. All rights reserved.</p>`;
+  footer.innerHTML = `
+    <p>&copy; ${year} ShareTrip. All rights reserved.</p>
+    <a href="/feedback.html">Send Feedback</a>
+  `;
 }
 
 function genderClass(gender) {

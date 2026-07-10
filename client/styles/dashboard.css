@@ -22,6 +22,12 @@ body.donation-body {
     background: #e8eef5;
 }
 
+.feedback-page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 44px 24px 64px;
+}
+
 .dashboard-header {
     display: flex;
     justify-content: space-between;
@@ -126,6 +132,12 @@ body.donation-body {
     min-width: 0;
 }
 
+.feedback-form {
+    display: grid;
+    gap: 16px;
+}
+
+.feedback-form label,
 .donation-form label {
     color: #334155;
     display: grid;
@@ -134,6 +146,9 @@ body.donation-body {
     gap: 5px;
 }
 
+.feedback-form input,
+.feedback-form select,
+.feedback-form textarea,
 .donation-form input[type="number"],
 .donation-form input[type="text"] {
     border: 1px solid #cbd5e1;
@@ -143,10 +158,22 @@ body.donation-body {
     padding: 10px;
 }
 
+.feedback-form textarea {
+    line-height: 1.5;
+    resize: vertical;
+}
+
+.feedback-form input:focus,
+.feedback-form select:focus,
+.feedback-form textarea:focus,
 .donation-form input[type="number"]:focus,
 .donation-form input[type="text"]:focus {
     border-color: #2563eb;
     outline: 2px solid rgba(37, 99, 235, 0.2);
+}
+
+.feedback-form button {
+    justify-self: start;
 }
 
 .donation-amounts {
@@ -1331,6 +1358,37 @@ body.donation-body {
 
 .ride-status.full {
     color: #b91c1c;
+}
+
+.full-rides-banner {
+    align-items: center;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    color: #1e3a8a;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 14px;
+    gap: 12px;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+}
+
+.full-rides-banner button {
+    background: #2563eb;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+    padding: 6px 14px;
+    white-space: nowrap;
+}
+
+.full-rides-banner button:hover {
+    background: #1d4ed8;
 }
 
 .empty-rides {

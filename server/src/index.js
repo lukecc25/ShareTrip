@@ -22,6 +22,7 @@ const HTML_PAGES = [
   "messages.html",
   "message-thread.html",
   "guest-chat.html",
+  "feedback.html",
 ];
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -113,6 +114,7 @@ app.use("/api/users", usersRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/guest-chat", require("./routes/guest-chat"));
 app.use("/api/messages", require("./routes/messages"));
+app.use("/api/feedback", require("./routes/feedback"));
 
 
 app.get("/", (_req, res) => {
