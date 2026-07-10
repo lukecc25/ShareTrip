@@ -10,7 +10,6 @@ const MESSAGES = {
   left: "You left the ride.",
   canceled: "Your ride has been canceled.",
   commented: "Your comment has been posted.",
-  driverOfferCancelled: "Your pending offer to drive has been cancelled.",
 };
 
 let state = {
@@ -23,9 +22,24 @@ let state = {
   isAuthenticated: false,
   hideRequestRides: false,
   sameGenderOnly: false,
+  offersOnly: false,
+  locationFilter: "",  // state name, "Other", or "" for all
+  dateFrom: "",
+  dateTo: "",
+  filtersVisible: false,
   message: "",
   messageType: "success",
 };
+
+const IDAHO_ADJACENT_STATES = [
+  "Idaho",
+  "Montana",
+  "Wyoming",
+  "Utah",
+  "Nevada",
+  "Oregon",
+  "Washington",
+];
 
 function filterUrl(scope, search) {
   const params = new URLSearchParams({ scope });
@@ -54,13 +68,6 @@ function parseInitialState() {
   if (query.has("left")) showMessage("left");
   if (query.has("canceled")) showMessage("canceled");
   if (query.has("commented")) showMessage("commented");
-  if (query.has("driver_pending")) {
-    state.message = "Your driver offer is pending approval.";
-    state.messageType = "success";
-  }
-  if (query.has("driver_offer_cancelled")) {
-    showMessage("driverOfferCancelled");
-  }
 
   u().stripFlashQueryParams();
 }
@@ -101,6 +108,77 @@ function matchesSameGenderFilter(ride) {
   return ownerGender === userGender;
 }
 
+function rideMatchesState(ride, stateName) {
+  const fields = [
+    ride.destination_state || "",
+    ride.origin || "",
+    ride.destination || "",
+  ];
+  return fields.some((f) =>
+    f.toLowerCase().includes(stateName.toLowerCase())
+  );
+}
+
+function matchesLocationFilter(ride) {
+  const q = state.locationFilter.trim();
+  if (!q) {
+    return true;
+  }
+  if (q === "Other") {
+    // Show rides that don't match any of the listed states.
+    return !IDAHO_ADJACENT_STATES.some((s) => rideMatchesState(ride, s));
+  }
+  return rideMatchesState(ride, q);
+}
+
+// Maps state names to their common abbreviations so "Provo, UT" matches "Utah".
+const STATE_ABBREVIATIONS = {
+  Idaho: ["ID"],
+  Montana: ["MT"],
+  Wyoming: ["WY"],
+  Utah: ["UT"],
+  Nevada: ["NV"],
+  Oregon: ["OR"],
+  Washington: ["WA"],
+};
+
+function rideDestinationMatchesState(ride, stateName) {
+  const abbrevs = STATE_ABBREVIATIONS[stateName] || [];
+  // Only match against destination fields, not origin.
+  const fields = [
+    String(ride.destination_state || "").trim(),
+    String(ride.destination || "").trim(),
+  ].map((f) => f.toLowerCase());
+
+  const stateNameLower = stateName.toLowerCase();
+  const abbrevPatterns = abbrevs.map((a) => a.toLowerCase());
+
+  return fields.some((field) => {
+    if (field === stateNameLower) return true;
+    if (field.includes(stateNameLower)) return true;
+    // Match ", UT" or " UT" or "(UT)" style abbreviations
+    return abbrevPatterns.some(
+      (abbrev) =>
+        field === abbrev ||
+        field.endsWith(`, ${abbrev}`) ||
+        field.endsWith(` ${abbrev}`) ||
+        field.includes(`, ${abbrev} `) ||
+        field.includes(`(${abbrev})`)
+    );
+  });
+}
+
+function matchesStateFilter(ride) {
+  if (!state.stateFilter) return true;
+  if (state.stateFilter === "Other") {
+    // Show rides that don't match any of the listed states.
+    return !IDAHO_ADJACENT_STATES.some((s) =>
+      rideDestinationMatchesState(ride, s)
+    );
+  }
+  return rideDestinationMatchesState(ride, state.stateFilter);
+}
+
 function visibleRides() {
   let rides = state.rides;
 
@@ -108,8 +186,32 @@ function visibleRides() {
     if (state.hideRequestRides) {
       rides = rides.filter(isOfferRide);
     }
+    if (state.offersOnly) {
+      rides = rides.filter(isOfferRide);
+    }
     if (state.sameGenderOnly) {
       rides = rides.filter(matchesSameGenderFilter);
+    }
+    if (state.locationFilter.trim()) {
+      rides = rides.filter(matchesLocationFilter);
+    }
+    if (!state.showFull) {
+      rides = rides.filter((r) => {
+        // Hide offer rides that are full (seats === 0) unless showFull is on.
+        if (String(r.ride_type || "").toLowerCase() === "offer") {
+          return r.seats > 0 || r.is_owner === 1 || r.current_user_joined === 1;
+        }
+        return true;
+      });
+    }
+    if (state.stateFilter) {
+      rides = rides.filter(matchesStateFilter);
+    }
+    if (state.dateFrom.trim()) {
+      rides = rides.filter((r) => r.start_date >= state.dateFrom.trim());
+    }
+    if (state.dateTo.trim()) {
+      rides = rides.filter((r) => r.start_date <= state.dateTo.trim());
     }
   }
 
@@ -122,11 +224,21 @@ function emptyRidesMessage() {
   }
 
   const parts = [];
-  if (state.hideRequestRides) {
+  if (state.hideRequestRides || state.offersOnly) {
     parts.push("driver requests are hidden");
   }
   if (state.sameGenderOnly) {
     parts.push("only rides posted by people with the same gender as you are shown");
+  }
+  if (state.locationFilter.trim()) {
+    parts.push(`location: ${state.locationFilter.trim()}`);
+  }
+  if (state.dateFrom.trim() || state.dateTo.trim()) {
+    const from = state.dateFrom.trim();
+    const to = state.dateTo.trim();
+    if (from && to) parts.push(`date between ${from} and ${to}`);
+    else if (from) parts.push(`date from ${from}`);
+    else parts.push(`date until ${to}`);
   }
 
   if (parts.length === 0) {
@@ -183,34 +295,26 @@ function renderRideCard(ride) {
   const splitCost = ride.split_cost;
   const commentCount = ride.comment_count;
 
-  // --- Dynamic Actual Name Resolution ---
   let driverNameDisplay = "";
-  
   if (isOffer) {
     if (isOwner) {
       driverNameDisplay = "You";
     } else {
-      // Check common API naming patterns for the driver's actual name
       const firstName = ride.driver_fname || ride.owner_fname || ride.user?.fname || "";
       const lastName = ride.driver_lname || ride.owner_lname || ride.user?.lname || "";
       const fullName = `${firstName} ${lastName}`.trim();
-
-      // Fallback to a single name field if names are not split into first/last properties
       driverNameDisplay = fullName || ride.driver_name || ride.owner_name || "Unknown Member";
     }
   } else {
-    // If it's a Request, handle the assigned driver's actual name
     if (ride.has_assigned_driver) {
       const assignedFirstName = ride.assigned_driver_fname || ride.assigned_driver?.fname || "";
       const assignedLastName = ride.assigned_driver_lname || ride.assigned_driver?.lname || "";
       const assignedFullName = `${assignedFirstName} ${assignedLastName}`.trim();
-      
       driverNameDisplay = assignedFullName || ride.assigned_driver_name || "Assigned Driver";
     } else {
       driverNameDisplay = "No driver assigned yet";
     }
   }
-  // ---------------------------------------
 
   let footer = `<a href="/ride-details.html?ride=${ride.id}" class="details-link">Details${
     commentCount > 0 ? ` (${commentCount})` : ""
@@ -291,7 +395,7 @@ function renderRideCard(ride) {
         </div>
         ${priceBlock}
       </div>
-      
+
       <div class="ride-driver-info" style="margin-bottom: 10px; font-size: 0.9rem; color: #4a5568;">
         <span>Driver:</span> <strong style="color: #2d3748;">${escapeHtml(driverNameDisplay)}</strong>
       </div>
@@ -304,7 +408,7 @@ function renderRideCard(ride) {
       <div class="ride-details">
         <div><span>Start</span><strong>${escapeHtml(formatDateValue(ride.start_date))}</strong></div>
         <div><span>End</span><strong>${escapeHtml(formatDateValue(ride.end_date))}</strong></div>
-        ${ride.start_time ? `<div><span>Pickup Time</span><strong>${escapeHtml(ride.start_time)}</strong></div>` : ""}
+        ${ride.departure_time ? `<div><span>Departure time</span><strong>${escapeHtml(ride.departure_time)}</strong></div>` : ""}
         ${offerDetails}
         <div><span>Preference</span><strong>${escapeHtml(ride.gender_preference)}</strong></div>
       </div>
@@ -471,6 +575,30 @@ function updateStaticChrome() {
 
   const showAllFilters = state.scope === "all" && state.isAuthenticated;
 
+  // Toggle filter panel visibility.
+  const filterPanel = document.getElementById("advanced-filter-panel");
+  if (filterPanel) {
+    filterPanel.hidden = !state.filtersVisible || !showAllFilters;
+  }
+
+  // Update the toggle button state.
+  const filterToggleBtn = document.getElementById("filter-toggle-btn");
+  if (filterToggleBtn) {
+    filterToggleBtn.hidden = !showAllFilters;
+    filterToggleBtn.classList.toggle("active", state.filtersVisible);
+    const label = document.getElementById("filter-toggle-label");
+    if (label) {
+      const hasActiveFilters =
+        state.offersOnly ||
+        state.showFull ||
+        state.stateFilter ||
+        state.locationFilter.trim() ||
+        state.dateFrom.trim() ||
+        state.dateTo.trim();
+      label.textContent = hasActiveFilters ? "Filters (on)" : "Filters";
+    }
+  }
+
   const requestFilter = document.getElementById("hide-request-rides-filter");
   if (requestFilter) {
     requestFilter.hidden = !showAllFilters;
@@ -497,6 +625,29 @@ function updateStaticChrome() {
       }
     }
   }
+
+  // Offers-only filter checkbox.
+  const offersOnlyFilter = document.getElementById("offers-only-filter");
+  if (offersOnlyFilter) {
+    if (showAllFilters) {
+      const checkbox = offersOnlyFilter.querySelector('input[type="checkbox"]');
+      if (checkbox) {
+        checkbox.checked = state.offersOnly;
+      }
+    }
+  }
+
+  // Location filter select.
+  const locationSelect = document.getElementById("location-filter-select");
+  if (locationSelect) {
+    locationSelect.value = state.locationFilter;
+  }
+
+  // Date filter inputs.
+  const dateFromInput = document.getElementById("date-from-input");
+  if (dateFromInput) dateFromInput.value = state.dateFrom;
+  const dateToInput = document.getElementById("date-to-input");
+  if (dateToInput) dateToInput.value = state.dateTo;
 
   const messageEl = document.getElementById("dashboard-message");
   if (messageEl) {
@@ -644,7 +795,6 @@ function initRideFormControls() {
   updateEndDateField();
   updateOfferFields();
 
-  // Date input: auto-format as user types (YYYY-MM-DD)
   document.querySelectorAll(".date-input").forEach((input) => {
     input.addEventListener("input", (e) => {
       let val = e.target.value.replace(/[^\d]/g, "");
@@ -678,8 +828,7 @@ function bindFormEvents() {
       rideCost: formData.get("rideCost"),
       genderPreference: formData.get("genderPreference"),
       flexible: formData.get("flexible") === "1",
-      startTime: formData.get("startTime"),
-      endTime: formData.get("endTime"),
+      departureTime: formData.get("departureTime"),
     };
 
     try {
@@ -704,6 +853,17 @@ function bindFormEvents() {
       state.messageType = "error";
       render();
     }
+  });
+}
+
+function bindFilterToggle() {
+  const btn = document.getElementById("filter-toggle-btn");
+  if (!btn) {
+    return;
+  }
+  btn.addEventListener("click", () => {
+    state.filtersVisible = !state.filtersVisible;
+    render();
   });
 }
 
@@ -750,6 +910,88 @@ function bindSameGenderFilter() {
   });
 }
 
+function bindOffersOnlyFilter() {
+  const offersOnlyFilter = document.getElementById("offers-only-filter");
+  if (!offersOnlyFilter) {
+    return;
+  }
+
+  const checkbox = offersOnlyFilter.querySelector('input[type="checkbox"]');
+  if (!checkbox) {
+    return;
+  }
+
+  checkbox.addEventListener("change", () => {
+    state.offersOnly = checkbox.checked;
+    render();
+  });
+}
+
+function bindShowFullFilter() {
+  const filter = document.getElementById("show-full-filter");
+  if (!filter) return;
+  const checkbox = filter.querySelector('input[type="checkbox"]');
+  if (!checkbox) return;
+  checkbox.addEventListener("change", () => {
+    state.showFull = checkbox.checked;
+    renderRides();
+  });
+}
+
+function bindStateFilter() {
+  const select = document.getElementById("state-filter-select");
+  if (!select) return;
+  select.addEventListener("change", () => {
+    state.stateFilter = select.value;
+    renderRides();
+  });
+}
+
+function bindLocationFilter() {
+  const locationSelect = document.getElementById("location-filter-select");
+  if (!locationSelect) {
+    return;
+  }
+  locationSelect.addEventListener("change", () => {
+    state.locationFilter = locationSelect.value;
+    renderRides();
+  });
+}
+
+function bindDateFilter() {
+  const fromInput = document.getElementById("date-from-input");
+  const toInput = document.getElementById("date-to-input");
+  const clearBtn = document.getElementById("clear-date-filter");
+
+  if (fromInput) {
+    fromInput.addEventListener("input", () => {
+      state.dateFrom = fromInput.value;
+      renderRides();
+    });
+  }
+  if (toInput) {
+    toInput.addEventListener("input", () => {
+      state.dateTo = toInput.value;
+      renderRides();
+    });
+  }
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      state.dateFrom = "";
+      state.dateTo = "";
+      state.locationFilter = "";
+      state.offersOnly = false;
+      if (fromInput) fromInput.value = "";
+      if (toInput) toInput.value = "";
+      const locSelect = document.getElementById("location-filter-select");
+      if (locSelect) locSelect.value = "";
+      const offersCheckbox = document.querySelector("#offers-only-filter input");
+      if (offersCheckbox) offersCheckbox.checked = false;
+      renderRides();
+    });
+  }
+}
+
 function bindSearchForm() {
   const searchForm = document.getElementById("searchForm");
   if (!searchForm || searchForm.dataset.bound === "true") {
@@ -781,7 +1023,7 @@ function bindRideActions() {
           await ShareTripApi.apiFetch(`/api/rides/${rideId}/become-driver`, {
             method: "POST",
           });
-          window.location.href = `/dashboard.html?driver_pending=1&scope=${state.scope}`;
+          window.location.href = `/dashboard.html?scope=${state.scope}`;
           return;
         }
         if (action === "cancel-driver-offer") {
@@ -791,7 +1033,7 @@ function bindRideActions() {
           await ShareTripApi.apiFetch(`/api/rides/${rideId}/cancel-driver-offer`, {
             method: "POST",
           });
-          window.location.href = `/dashboard.html?driver_offer_cancelled=1&scope=${state.scope}`;
+          window.location.href = `/dashboard.html?scope=${state.scope}`;
           return;
         }
         if (action === "accept-offer") {
@@ -857,8 +1099,14 @@ async function initDashboardPage() {
 
   parseInitialState();
   bindSearchForm();
+  bindFilterToggle();
   bindRequestRideFilter();
   bindSameGenderFilter();
+  bindOffersOnlyFilter();
+  bindShowFullFilter();
+  bindStateFilter();
+  bindLocationFilter();
+  bindDateFilter();
 
   const session = await ShareTripAuth.getSession();
   state.isAuthenticated = Boolean(session.isAuthenticated);

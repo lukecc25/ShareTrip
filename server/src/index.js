@@ -21,6 +21,7 @@ const HTML_PAGES = [
   "ride-details.html",
   "messages.html",
   "message-thread.html",
+  "guest-chat.html",
 ];
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -110,6 +111,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/rides", ridesRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/notifications", notificationsRouter);
+app.use("/api/guest-chat", require("./routes/guest-chat"));
 app.use("/api/messages", require("./routes/messages"));
 
 

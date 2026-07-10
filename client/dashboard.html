@@ -42,24 +42,72 @@
       </div>
 
       <div class="ride-filter-controls">
-        <form class="ride-search-form" id="searchForm">
-          <input type="hidden" name="scope" id="search-scope" value="all">
-          <label for="rideSearch">Search rides</label>
-          <div class="ride-search-row">
-            <input id="rideSearch" type="search" name="q" placeholder="Destination, state, or people">
-            <button type="submit">Search</button>
+        <div class="ride-search-and-toggle">
+          <form class="ride-search-form" id="searchForm">
+            <input type="hidden" name="scope" id="search-scope" value="all">
+            <label for="rideSearch">Search rides</label>
+            <div class="ride-search-row">
+              <input id="rideSearch" type="search" name="q" placeholder="Destination, state, or people">
+              <button type="submit">Search</button>
+            </div>
+            <a href="#" class="clear-search-link" id="clear-search" hidden>Clear search</a>
+          </form>
+
+          <!-- Filter toggle button -->
+          <button type="button" id="filter-toggle-btn" class="filter-toggle-btn" hidden>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+            <span id="filter-toggle-label">Filters</span>
+          </button>
+        </div>
+
+        <!-- Advanced filter panel: all filters in one place -->
+        <div id="advanced-filter-panel" hidden>
+          <div class="advanced-filter-grid">
+            <div class="filter-group">
+              <label class="filter-group-label">Destination state</label>
+              <select id="state-filter-select" class="filter-input">
+                <option value="">All states</option>
+                <option value="Idaho">Idaho</option>
+                <option value="Montana">Montana</option>
+                <option value="Wyoming">Wyoming</option>
+                <option value="Utah">Utah</option>
+                <option value="Nevada">Nevada</option>
+                <option value="Oregon">Oregon</option>
+                <option value="Washington">Washington</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-group-label">Date from</label>
+              <input type="date" id="date-from-input" class="filter-input date-input">
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-group-label">Date to</label>
+              <input type="date" id="date-to-input" class="filter-input date-input">
+            </div>
+
+            <div class="filter-group filter-group-checkboxes">
+              <label class="filter-group-label">Show</label>
+              <div class="filter-checkboxes">
+                <label class="ride-filter-toggle" id="offers-only-filter">
+                  <input type="checkbox"> Offers only
+                </label>
+                <label class="ride-filter-toggle" id="show-full-filter">
+                  <input type="checkbox"> Show full rides
+                </label>
+                <label class="ride-filter-toggle" id="hide-request-rides-filter" hidden>
+                  <input type="checkbox"> Hide driver requests
+                </label>
+                <label class="ride-filter-toggle" id="same-gender-only-filter" hidden>
+                  <input type="checkbox"> Same gender only
+                </label>
+              </div>
+            </div>
           </div>
-          <a href="#" class="clear-search-link" id="clear-search" hidden>Clear search</a>
-        </form>
-        <div class="ride-filter-toggles">
-          <label class="ride-filter-toggle" id="hide-request-rides-filter" hidden>
-            <input type="checkbox" checked>
-            Hide driver requests
-          </label>
-          <label class="ride-filter-toggle" id="same-gender-only-filter" hidden>
-            <input type="checkbox">
-            Same gender only
-          </label>
+
+          <button type="button" id="clear-date-filter" class="clear-filters-btn">Clear all filters</button>
         </div>
       </div>
     </section>

@@ -108,17 +108,19 @@
 }
 
 .chat-thread {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
     display: flex;
     flex-direction: column;
     gap: 10px;
-    height: 480px;
     margin-bottom: 14px;
-    overflow-y: auto;
-    padding: 16px;
+    min-height: 40px;
+}
+
+.chat-empty-state {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
+    font-style: italic;
+    padding: 16px 0;
 }
 
 .chat-message {
@@ -143,10 +145,13 @@
     background: #f1f5f9;
     border-radius: 12px;
     color: #1e293b;
+    display: inline-block;
     font-size: 14px;
     line-height: 1.4;
     overflow-wrap: anywhere;
     padding: 10px 12px;
+    width: fit-content;
+    max-width: 100%;
 }
 
 .chat-message.own .chat-message-bubble {
@@ -372,8 +377,15 @@ textarea.ride-details-input {
         top: 10px;
     }
 
-    .chat-thread {
-        height: 60vh;
+    .ride-detail-card-header {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .ride-details-edit-btn {
+        width: 100%;
+        text-align: center;
+        min-height: 38px;
     }
 
     .ride-details-grid {
@@ -382,5 +394,178 @@ textarea.ride-details-input {
 
     .ride-details-cell {
         border-right: none;
+    }
+
+    .ride-detail-meta {
+        flex-wrap: wrap;
+    }
+
+    .chat-composer {
+        flex-direction: column;
+    }
+
+    .chat-composer button {
+        width: 100%;
+        min-height: 42px;
+    }
+
+    .pickup-row {
+        padding: 8px 0;
+    }
+
+    .past-threads-toggle {
+        padding: 10px 14px;
+    }
+}
+
+.threads-empty-note {
+    color: #64748b;
+    font-size: 14px;
+    text-align: center;
+    padding: 16px 0;
+}
+
+.past-threads-section {
+    margin-top: 16px;
+}
+
+.past-threads-toggle {
+    background: transparent;
+    border: 0.5px solid #e2e8f0;
+    border-radius: 8px;
+    color: #64748b;
+    cursor: pointer;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 14px;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.past-threads-toggle:hover {
+    background: #f8fafc;
+    color: #334155;
+}
+
+.thread-list-past {
+    opacity: 0.75;
+}
+
+.thread-past-badge {
+    background: #f1f5f9;
+    border-radius: 999px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 1px 6px;
+}
+
+.guest-panel {
+    border-top: 0.5px solid #e2e8f0;
+    padding-top: 10px;
+    margin-top: 4px;
+}
+
+.guest-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.guest-panel-toggle {
+    font-size: 12px;
+    padding: 4px 10px;
+}
+
+.guest-form {
+    margin-bottom: 10px;
+}
+
+.guest-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 8px;
+}
+
+.guest-form-row input {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 13px;
+    padding: 7px 10px;
+    min-width: 0;
+}
+
+.guest-form-row input:focus {
+    border-color: #2563eb;
+    outline: 2px solid rgba(37, 99, 235, 0.2);
+}
+
+.guest-form-error {
+    color: #b91c1c;
+    font-size: 12px;
+    margin-bottom: 6px;
+}
+
+.guest-link-list {
+    display: grid;
+    gap: 8px;
+}
+
+.guest-link-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 8px 10px;
+}
+
+.guest-link-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.guest-link-info strong {
+    color: #1e293b;
+    font-size: 13px;
+}
+
+.guest-link-info span {
+    color: #64748b;
+    font-size: 12px;
+}
+
+.guest-copy-btn {
+    flex-shrink: 0;
+    font-size: 12px;
+    padding: 5px 10px;
+}
+
+.guest-empty {
+    color: #94a3b8;
+    font-size: 13px;
+    font-style: italic;
+    margin: 0;
+}
+
+.guest-name-badge {
+    font-size: 13px;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+@media (max-width: 700px) {
+    .guest-form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .guest-form-row button {
+        width: 100%;
     }
 }

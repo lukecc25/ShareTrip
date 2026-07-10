@@ -26,4 +26,13 @@ router.post("/read", requireApiAuth, async (req, res) => {
   }
 });
 
+router.post("/delete", requireApiAuth, async (req, res) => {
+  try {
+    await ridesService.deleteNotifications(req.userId, req.body.ids);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 module.exports = router;

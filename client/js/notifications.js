@@ -1,4 +1,4 @@
-const ALERT_AUTO_DISMISS_MS = 5000;
+const NOTIFICATION_AUTO_DISMISS_MS = 5000;
 const notificationItemTimers = new WeakMap();
 
 async function loadNotifications() {
@@ -21,7 +21,7 @@ function clearNotificationItemTimer(itemEl) {
   }
 }
 
-async function dismissNotificationItem(container, itemEl) {
+async function dismissNotificationItem(container, itemEl, { markRead = false } = {}) {
   if (!itemEl || itemEl.classList.contains("is-fading")) {
     return;
   }
@@ -31,13 +31,15 @@ async function dismissNotificationItem(container, itemEl) {
   const { fadeOutElement } = window.ShareTripUtils;
   fadeOutElement(itemEl, async () => {
     const id = Number(itemEl.dataset.id);
-    try {
-      await ShareTripApi.apiFetch("/api/notifications/read", {
-        method: "POST",
-        body: JSON.stringify({ ids: [id] }),
-      });
-    } catch {
-      // Still remove the banner item if marking read fails.
+    if (markRead) {
+      try {
+        await ShareTripApi.apiFetch("/api/notifications/read", {
+          method: "POST",
+          body: JSON.stringify({ ids: [id] }),
+        });
+      } catch {
+        // Still remove the banner item if marking read fails.
+      }
     }
 
     itemEl.remove();
@@ -45,6 +47,7 @@ async function dismissNotificationItem(container, itemEl) {
       container.hidden = true;
     }
     syncSiteHeaderOffset();
+    window.ShareTripNavbar?.updateNavNotificationBadge?.();
   });
 }
 
@@ -88,14 +91,14 @@ function renderNotificationBanner(container, notifications) {
   container.querySelectorAll(".notification-item").forEach((itemEl) => {
     const dismissButton = itemEl.querySelector("[data-dismiss-id]");
     dismissButton?.addEventListener("click", () => {
-      dismissNotificationItem(container, itemEl);
+      dismissNotificationItem(container, itemEl, { markRead: true });
     });
 
     notificationItemTimers.set(
       itemEl,
       setTimeout(() => {
         dismissNotificationItem(container, itemEl);
-      }, ALERT_AUTO_DISMISS_MS)
+      }, NOTIFICATION_AUTO_DISMISS_MS)
     );
   });
 }
@@ -106,21 +109,8 @@ async function showNotificationBanner() {
     return;
   }
   const notifications = await loadNotifications();
-  if (!notifications.length) {
-    renderNotificationBanner(container, notifications);
-    return;
-  }
-
-  try {
-    await ShareTripApi.apiFetch("/api/notifications/read", {
-      method: "POST",
-      body: JSON.stringify({ ids: notifications.map((item) => item.id) }),
-    });
-  } catch {
-    // Still show the banner even if marking read fails.
-  }
-
   renderNotificationBanner(container, notifications);
+  window.ShareTripNavbar?.updateNavNotificationBadge?.();
 }
 
 window.addEventListener("resize", () => {

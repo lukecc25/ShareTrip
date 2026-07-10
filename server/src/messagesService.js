@@ -10,6 +10,9 @@ function findAccount(store, id) {
   return store.accounts.find((a) => a.id === id) || null;
 }
 
+// The other side of the conversation: for an offer ride it's always the
+// owner (they're the one driving), for a request ride it's whoever has
+// been accepted as the driver (or null if nobody has been assigned yet).
 function getChatDriverId(ride) {
   return ride.ride_type === "offer" ? ride.owner_id : ride.assigned_driver_id;
 }
@@ -62,6 +65,7 @@ async function listThreadsForUser(userId) {
 
     const driverId = getChatDriverId(ride);
     if (!driverId) {
+      // Request ride with no assigned driver yet - there is no one to chat with.
       continue;
     }
 
@@ -76,6 +80,7 @@ async function listThreadsForUser(userId) {
       (m) => m.user_id !== userId && (!lastReadAt || m.created_at > lastReadAt)
     ).length;
 
+    const todayDate = new Date().toISOString().slice(0, 10);
     threads.push({
       ride_id: ride.id,
       ride_type: ride.ride_type,
@@ -83,6 +88,7 @@ async function listThreadsForUser(userId) {
       destination: ride.destination,
       destination_state: ride.destination_state,
       start_date: ride.start_date,
+      is_past: ride.start_date < todayDate,
       driver_id: driver?.id ?? null,
       driver_fname: driver?.fname ?? "",
       driver_lname: driver?.lname ?? "",
@@ -120,6 +126,14 @@ async function listMessages(rideId, userId) {
     throw new Error("You do not have access to this chat.");
   }
 
+  // Chat history is only accessible while the ride is still upcoming.
+  // Once the ride date has passed, messages are no longer retrievable
+  // to protect participant privacy.
+  const todayCheck = new Date().toISOString().slice(0, 10);
+  if (ride.start_date < todayCheck) {
+    throw new Error("Chat history is no longer available for past rides.");
+  }
+
   const driverId = getChatDriverId(ride);
   const isDriver = userId === driverId;
 
@@ -137,10 +151,35 @@ async function listMessages(rideId, userId) {
     };
   });
 
+  const myGuestTokenSet = new Set(
+    (store.guest_tokens || [])
+      .filter((t) => t.created_by === userId)
+      .map((t) => t.token)
+  );
+
   const messages = store.messages
     .filter((m) => Number(m.ride_id) === Number(rideId))
     .sort((a, b) => a.created_at.localeCompare(b.created_at))
     .map((m) => {
+      if (m.guest_token) {
+        // Message sent by a guest via token link.
+        const guestToken = (store.guest_tokens || []).find(
+          (t) => t.token === m.guest_token
+        );
+        const isOwnGuest = myGuestTokenSet.has(m.guest_token);
+        return {
+          id: m.id,
+          ride_id: m.ride_id,
+          user_id: null,
+          body: m.body,
+          created_at: m.created_at,
+          fname: guestToken?.guest_name ?? "Guest",
+          lname: "",
+          is_own: false,
+          is_guest: true,
+          is_own_guest: isOwnGuest,
+        };
+      }
       const sender = findAccount(store, m.user_id);
       return {
         id: m.id,
@@ -151,10 +190,30 @@ async function listMessages(rideId, userId) {
         fname: sender?.fname ?? "",
         lname: sender?.lname ?? "",
         is_own: m.user_id === userId,
+        is_guest: false,
       };
     });
 
   await markThreadRead(userId, rideId);
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const isPast = ride.start_date < todayStr;
+
+  // departure_time is saved on the ride when the driver sets it via the
+  // ride form or the chat panel.
+  const effectiveDepartureTime = ride.departure_time ?? null;
+
+  // Include guest tokens the current user created for this ride so they
+  // can share chat links with their non-account guests.
+  const myGuestTokens = (store.guest_tokens || [])
+    .filter(
+      (t) => Number(t.ride_id) === Number(rideId) && t.created_by === userId
+    )
+    .map((t) => ({
+      guest_name: t.guest_name,
+      guest_phone: t.guest_phone || null,
+      token: t.token,
+    }));
 
   return {
     ride: {
@@ -164,12 +223,14 @@ async function listMessages(rideId, userId) {
       destination: ride.destination,
       destination_state: ride.destination_state,
       start_date: ride.start_date,
-      departure_time: ride.departure_time ?? null,
+      is_past: isPast,
+      departure_time: effectiveDepartureTime,
       ride_notes: ride.ride_notes ?? null,
     },
     viewer: { is_driver: isDriver },
     passengers,
     messages,
+    my_guest_tokens: myGuestTokens,
   };
 }
 
@@ -188,6 +249,11 @@ async function sendMessage(rideId, userId, body) {
     throw new Error("You do not have access to this chat.");
   }
 
+  const sendTodayCheck = new Date().toISOString().slice(0, 10);
+  if (ride.start_date < sendTodayCheck) {
+    throw new Error("You cannot send messages for a past ride.");
+  }
+
   throwIfError(
     await getSupabase().from("messages").insert({
       ride_id: Number(rideId),
@@ -197,6 +263,7 @@ async function sendMessage(rideId, userId, body) {
     })
   );
 
+  // Sending a message implies you've seen the thread up to this point too.
   await markThreadRead(userId, rideId);
 }
 
@@ -225,6 +292,8 @@ async function updateRideDetails(rideId, userId, { departureTime, rideNotes }) {
   );
 }
 
+// Updates the pickup_spot for a single passenger row.
+// Drivers can update any passenger; passengers can only update themselves.
 async function updatePickupSpot(rideId, passengerUserId, requestingUserId, pickupSpot) {
   const store = await fetchStore();
   const ride = findRide(store, rideId);

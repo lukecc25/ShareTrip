@@ -12,6 +12,9 @@ let state = {
   viewingUserId: null,
   isOwnProfile: true,
   pendingAbleDriver: false,
+  tripHistoryExpanded: false,
+  notificationsExpanded: false,
+  notificationsUnreadOnly: false,
 };
 
 const PHOTO_EDITOR = {
@@ -610,34 +613,61 @@ function renderProfileNotification(item) {
           }
         </div>
       </div>
-      <button type="button" class="notification-dismiss profile-notification-dismiss" data-dismiss-id="${item.id}" aria-label="Dismiss notification">&times;</button>
+      <button type="button" class="notification-dismiss profile-notification-dismiss" data-action="delete-notification" data-notification-id="${item.id}" aria-label="Delete notification">&times;</button>
     </article>`;
+}
+
+function isNotificationUnread(item) {
+  return item.read_flag !== true && item.read_flag !== 1 && item.read_flag !== "1";
 }
 
 function renderNotificationsSection() {
   const notifications = state.notifications;
-  const unreadCount = notifications.filter((item) => !item.read_flag).length;
+  const visibleNotifications = state.notificationsUnreadOnly
+    ? notifications.filter(isNotificationUnread)
+    : notifications;
+  const unreadCount = notifications.filter(isNotificationUnread).length;
+  const hasNotifications = notifications.length > 0;
 
-  const listHtml = notifications.length
-    ? `<div class="profile-notification-list">${notifications.map(renderProfileNotification).join("")}</div>`
-    : '<p class="profile-empty">No notifications yet. Ride updates and driver offers will appear here.</p>';
+  const listHtml = !hasNotifications
+    ? '<p class="profile-empty">No notifications yet. Ride updates and driver offers will appear here.</p>'
+    : visibleNotifications.length
+      ? `<div class="profile-notification-list">${visibleNotifications.map(renderProfileNotification).join("")}</div>`
+      : '<p class="profile-empty">No unread notifications.</p>';
+
+  const headerActions = hasNotifications
+    ? `<div class="profile-notification-header-buttons">
+        <button type="button" class="secondary-button profile-notification-header-btn" data-action="mark-all-notifications-read"${unreadCount === 0 ? " disabled" : ""}>Read all</button>
+        <button type="button" class="secondary-button profile-notification-header-btn" data-action="clear-all-notifications">Clear all</button>
+      </div>`
+    : "";
+
+  const filterHtml = hasNotifications
+    ? `<label class="profile-notification-filter">
+        <input type="checkbox" data-action="toggle-notifications-unread-only"${state.notificationsUnreadOnly ? " checked" : ""}>
+        Unread only
+      </label>`
+    : "";
+
+  const notificationsToggle = `<button type="button" class="profile-section-toggle" data-action="toggle-notifications" aria-expanded="${state.notificationsExpanded}" aria-controls="profile-notifications-panel">
+      <span>${state.notificationsExpanded ? "Hide notifications" : "Show notifications"}</span>
+      <span class="profile-section-toggle-chevron${state.notificationsExpanded ? " is-open" : ""}" aria-hidden="true">▼</span>
+    </button>`;
 
   return `
     <section class="profile-section" id="profile-notifications">
-      <div class="profile-section-header">
+      <div class="profile-section-header profile-section-header--notifications">
         <h2>Notifications</h2>
-        <span>${notifications.length}</span>
+        <div class="profile-section-header-actions">
+          ${headerActions}
+          ${notificationsToggle}
+          <span>${notifications.length}</span>
+        </div>
       </div>
-      ${
-        unreadCount > 0
-          ? `<div class="profile-notification-actions">
-              <button type="button" class="secondary-button" data-action="mark-all-notifications-read">
-                Mark all as read
-              </button>
-            </div>`
-          : ""
-      }
-      ${listHtml}
+      <div class="profile-notifications-panel${state.notificationsExpanded ? "" : " is-collapsed"}" id="profile-notifications-panel">
+        ${filterHtml}
+        ${listHtml}
+      </div>
     </section>`;
 }
 
@@ -658,6 +688,13 @@ function renderProfilePage(data) {
 
   const reviewsHeading = state.isOwnProfile ? "Reviews about you" : "Reviews";
   const tripsHeading = state.isOwnProfile ? "Trip history" : "Past trips";
+  const tripHistoryToggle =
+    tripHistory.length > 0
+      ? `<button type="button" class="profile-section-toggle" data-action="toggle-trip-history" aria-expanded="${state.tripHistoryExpanded}" aria-controls="trip-history-panel">
+          <span>${state.tripHistoryExpanded ? "Hide past rides" : "Show past rides"}</span>
+          <span class="profile-section-toggle-chevron${state.tripHistoryExpanded ? " is-open" : ""}" aria-hidden="true">▼</span>
+        </button>`
+      : "";
   const notificationsHtml =
     state.isOwnProfile && !state.editing ? renderNotificationsSection() : "";
 
@@ -671,11 +708,16 @@ function renderProfilePage(data) {
       ${reviewsHtml}
     </section>
     <section class="profile-section">
-      <div class="profile-section-header">
+      <div class="profile-section-header profile-section-header--trip-history">
         <h2>${tripsHeading}</h2>
-        <span>${tripHistory.length}</span>
+        <div class="profile-section-header-actions">
+          ${tripHistoryToggle}
+          <span>${tripHistory.length}</span>
+        </div>
       </div>
-      ${tripsHtml}
+      <div class="trip-history-panel${state.tripHistoryExpanded ? "" : " is-collapsed"}" id="trip-history-panel">
+        ${tripsHtml}
+      </div>
     </section>
     ${notificationsHtml}`;
 }
@@ -695,26 +737,51 @@ function render() {
 }
 
 function bindProfileEvents() {
+  const root = document.getElementById("profile-root");
+
+  const tripHistoryToggle = root.querySelector('[data-action="toggle-trip-history"]');
+  if (tripHistoryToggle) {
+    tripHistoryToggle.addEventListener("click", () => {
+      state.tripHistoryExpanded = !state.tripHistoryExpanded;
+      render();
+    });
+  }
+
+  const notificationsToggle = root.querySelector('[data-action="toggle-notifications"]');
+  if (notificationsToggle) {
+    notificationsToggle.addEventListener("click", () => {
+      state.notificationsExpanded = !state.notificationsExpanded;
+      render();
+    });
+  }
+
+  const unreadOnlyToggle = root.querySelector('[data-action="toggle-notifications-unread-only"]');
+  if (unreadOnlyToggle) {
+    unreadOnlyToggle.addEventListener("change", () => {
+      state.notificationsUnreadOnly = unreadOnlyToggle.checked;
+      render();
+    });
+  }
+
   if (!state.isOwnProfile) {
     return;
   }
 
-  const root = document.getElementById("profile-root");
-
-  root.querySelectorAll("[data-dismiss-id]").forEach((button) => {
+  root.querySelectorAll('[data-action="delete-notification"]').forEach((button) => {
     button.addEventListener("click", async () => {
-      const id = Number(button.dataset.dismissId);
+      const id = Number(button.dataset.notificationId);
       try {
-        await ShareTripApi.apiFetch("/api/notifications/read", {
+        await ShareTripApi.apiFetch("/api/notifications/delete", {
           method: "POST",
           body: JSON.stringify({ ids: [id] }),
         });
-        state.notifications = state.notifications.map((item) =>
-          Number(item.id) === id ? { ...item, read_flag: 1 } : item
+        state.notifications = state.notifications.filter(
+          (item) => Number(item.id) !== id
         );
         render();
+        ShareTripNavbar.updateNavNotificationBadge?.();
       } catch (error) {
-        showMessage(error.message || "Unable to dismiss notification.", "error");
+        showMessage(error.message || "Unable to delete notification.", "error");
       }
     });
   });
@@ -723,7 +790,7 @@ function bindProfileEvents() {
   if (markAllBtn) {
     markAllBtn.addEventListener("click", async () => {
       const unreadIds = state.notifications
-        .filter((item) => !item.read_flag)
+        .filter(isNotificationUnread)
         .map((item) => item.id);
       if (!unreadIds.length) {
         return;
@@ -738,8 +805,30 @@ function bindProfileEvents() {
           read_flag: 1,
         }));
         render();
+        ShareTripNavbar.updateNavNotificationBadge?.();
       } catch (error) {
         showMessage(error.message || "Unable to mark notifications as read.", "error");
+      }
+    });
+  }
+
+  const clearAllBtn = root.querySelector('[data-action="clear-all-notifications"]');
+  if (clearAllBtn) {
+    clearAllBtn.addEventListener("click", async () => {
+      const allIds = state.notifications.map((item) => item.id);
+      if (!allIds.length) {
+        return;
+      }
+      try {
+        await ShareTripApi.apiFetch("/api/notifications/delete", {
+          method: "POST",
+          body: JSON.stringify({ ids: allIds }),
+        });
+        state.notifications = [];
+        render();
+        ShareTripNavbar.updateNavNotificationBadge?.();
+      } catch (error) {
+        showMessage(error.message || "Unable to clear notifications.", "error");
       }
     });
   }
@@ -762,6 +851,7 @@ function bindProfileEvents() {
               : "Driver offer declined."
           );
           render();
+          ShareTripNavbar.updateNavNotificationBadge?.();
         } catch (error) {
           showMessage(error.message || "Unable to update driver offer.", "error");
         }

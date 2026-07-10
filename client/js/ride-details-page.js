@@ -42,20 +42,22 @@ function renderRatingForm(rideId, person, role) {
   `;
 }
 
-function renderRequestDriverActions(ride) {
-  if (!isAuthenticated) {
-    return "";
-  }
-
+function renderRequestDriverActions(ride, currentUserId) {
   if (ride.is_owner) {
     return "";
   }
   if (ride.has_assigned_driver) {
+    // If the current user is the assigned driver, show resign button.
+    if (ride.assigned_driver_id === currentUserId) {
+      return `
+        <span class="ride-status">Accepted as driver</span>
+        <button type="button" class="danger-button" data-action="resign-driver" data-ride-id="${ride.id}">Resign as driver</button>`;
+    }
     return '<span class="ride-status">Driver assigned</span>';
   }
   const status = ride.my_driver_offer_status;
   if (status === "pending") {
-    return `<button type="button" class="secondary-button cancel-pending-offer" data-action="cancel-driver-offer" data-ride-id="${ride.id}" data-offer-id="${ride.my_driver_offer_id}">Cancel pending</button>`;
+    return `<button type="button" class="secondary-button" data-action="cancel-driver-offer" data-ride-id="${ride.id}" data-offer-id="${ride.my_driver_offer_id}">Cancel pending</button>`;
   }
   if (status === "accepted") {
     return '<span class="ride-status">Accepted as driver</span>';
@@ -94,16 +96,12 @@ function renderDriverOffersPanel(detail) {
 }
 
 function profilePageUrl(userId) {
-  if (!userId) {
-    return "";
-  }
+  if (!userId) return "";
   return `/my-profile.html?user=${encodeURIComponent(userId)}`;
 }
 
 function renderViewProfileLink(userId) {
-  if (!isAuthenticated || !userId) {
-    return "";
-  }
+  if (!userId) return "";
   return `<a href="${profilePageUrl(userId)}" class="view-profile-link secondary-button">View profile</a>`;
 }
 
@@ -235,22 +233,58 @@ function updatePageMessage() {
   });
 }
 
+function renderVehicleSection(detail) {
+  const vehicle = detail.driver_vehicle;
+  if (!vehicle || vehicle.status === "unavailable") {
+    return "";
+  }
+
+  if (vehicle.status === "pending") {
+    return `
+      <section class="detail-card detail-section vehicle-section">
+        <div class="section-heading"><h2>Vehicle details</h2></div>
+        <p class="vehicle-pending-note">Vehicle details will appear here once the ride day arrives.</p>
+      </section>`;
+  }
+
+  const { escapeHtml } = u();
+  const info = vehicle.info || {};
+  const rows = [];
+
+  if (info.car_make_model) {
+    rows.push(`<div><span>Make &amp; model</span><strong>${escapeHtml(info.car_make_model)}</strong></div>`);
+  }
+  if (info.car_color) {
+    rows.push(`<div><span>Color</span><strong>${escapeHtml(info.car_color)}</strong></div>`);
+  }
+  if (info.car_seat_capacity) {
+    rows.push(`<div><span>Seat capacity</span><strong>${escapeHtml(info.car_seat_capacity)}</strong></div>`);
+  }
+  if (info.license_plate_partial) {
+    rows.push(`<div><span>Plate ends with</span><strong>${escapeHtml(info.license_plate_partial)}</strong></div>`);
+  }
+
+  if (!rows.length) {
+    return "";
+  }
+
+  return `
+    <section class="detail-card detail-section vehicle-section">
+      <div class="section-heading"><h2>Vehicle details</h2></div>
+      <div class="vehicle-details-grid">${rows.join("")}</div>
+    </section>`;
+}
+
 function render() {
   const root = document.getElementById("ride-detail-root");
   if (!root || !detail) {
     return;
   }
 
-  const {
-    escapeHtml,
-    formatDateValue,
-    formatCommentDate,
-    rideTypeLabel,
-    fullName,
-    routeIconSvg,
-  } = u();
+  const { escapeHtml, formatDateValue, rideTypeLabel, fullName, routeIconSvg } = u();
 
   const ride = detail.ride;
+  const currentUserId = ride.current_user_id;
   const isOfferPending = u().isOfferPendingRide(ride);
   const typeLabel = rideTypeLabel(ride.ride_type, ride);
   const typeClass = isOfferPending
@@ -288,8 +322,17 @@ function render() {
     } else if (!isOfferPending) {
       actions = '<span class="ride-status full">Full</span>';
     }
-  } else if (!isOwner) {
-    actions = renderRequestDriverActions(ride);
+  } else {
+    // Request ride: show resign/remove-driver buttons where applicable.
+    const driverActions = renderRequestDriverActions(ride, currentUserId);
+
+    // Owner with an assigned driver: add "Remove driver" button.
+    const removeDriverBtn =
+      isOwner && ride.has_assigned_driver
+        ? `<button type="button" class="danger-button" data-action="remove-driver" data-ride-id="${ride.id}">Remove driver</button>`
+        : "";
+
+    actions = [driverActions, removeDriverBtn].filter(Boolean).join(" ");
   }
 
   const assignedDriverHtml =
@@ -327,6 +370,7 @@ function render() {
           <div class="posted-by-row"><span>Posted by</span><div><strong>${escapeHtml(driverName)}</strong>${!isOwner ? renderViewProfileLink(ride.owner_id) : ""}</div></div>
           <div><span>Start</span><strong>${escapeHtml(formatDateValue(ride.start_date))}</strong></div>
           <div><span>End</span><strong>${escapeHtml(formatDateValue(ride.end_date))}</strong></div>
+          ${ride.departure_time ? `<div><span>Departure time</span><strong>${escapeHtml(ride.departure_time)}</strong></div>` : ""}
           <div><span>Trip</span><strong>${ride.roundtrip ? "Round trip" : "One way"}</strong></div>
           ${pendingDriverOfferHtml}
           ${
@@ -381,50 +425,6 @@ function render() {
   updatePageMessage();
 }
 
-
-function renderVehicleSection(detail) {
-  const vehicle = detail.driver_vehicle;
-  if (!vehicle || vehicle.status === "unavailable") {
-    return "";
-  }
- 
-  if (vehicle.status === "pending") {
-    return `
-      <section class="detail-card detail-section vehicle-section">
-        <div class="section-heading"><h2>Vehicle details</h2></div>
-        <p class="vehicle-pending-note">Vehicle details will appear here once the ride day arrives.</p>
-      </section>`;
-  }
- 
-  const { escapeHtml } = u();
-  const info = vehicle.info || {};
-  const rows = [];
- 
-  if (info.car_make_model) {
-    rows.push(`<div><span>Make &amp; model</span><strong>${escapeHtml(info.car_make_model)}</strong></div>`);
-  }
-  if (info.car_color) {
-    rows.push(`<div><span>Color</span><strong>${escapeHtml(info.car_color)}</strong></div>`);
-  }
-  if (info.car_seat_capacity) {
-    rows.push(`<div><span>Seat capacity</span><strong>${escapeHtml(info.car_seat_capacity)}</strong></div>`);
-  }
-  if (info.license_plate_partial) {
-    rows.push(`<div><span>Plate ends with</span><strong>${escapeHtml(info.license_plate_partial)}</strong></div>`);
-  }
- 
-  if (!rows.length) {
-    return "";
-  }
- 
-  return `
-    <section class="detail-card detail-section vehicle-section">
-      <div class="section-heading"><h2>Vehicle details</h2></div>
-      <div class="vehicle-details-grid">${rows.join("")}</div>
-    </section>`;
-}
- 
-
 function bindEvents(rideId) {
   document.querySelectorAll("[data-action]").forEach((button) => {
     button.addEventListener("click", async () => {
@@ -435,22 +435,32 @@ function bindEvents(rideId) {
 
       try {
         if (action === "become-driver") {
-          await ShareTripApi.apiFetch(`/api/rides/${targetRideId}/become-driver`, {
-            method: "POST",
-          });
+          await ShareTripApi.apiFetch(`/api/rides/${targetRideId}/become-driver`, { method: "POST" });
           window.location.href = `/ride-details.html?ride=${targetRideId}&driver_pending=1`;
           return;
         }
+
         if (action === "cancel-driver-offer") {
-          if (!window.confirm("Cancel your pending driver offer?")) {
-            return;
-          }
-          await ShareTripApi.apiFetch(`/api/rides/${targetRideId}/cancel-driver-offer`, {
-            method: "POST",
-          });
+          if (!window.confirm("Cancel your pending driver offer?")) return;
+          await ShareTripApi.apiFetch(`/api/rides/${targetRideId}/cancel-driver-offer`, { method: "POST" });
           window.location.href = `/ride-details.html?ride=${targetRideId}&driver_offer_cancelled=1`;
           return;
         }
+
+        if (action === "resign-driver") {
+          if (!window.confirm("Are you sure you want to resign as driver? The ride owner will be notified.")) return;
+          await ShareTripApi.apiFetch(`/api/rides/${targetRideId}/resign-driver`, { method: "POST" });
+          window.location.href = `/ride-details.html?ride=${targetRideId}&resigned=1`;
+          return;
+        }
+
+        if (action === "remove-driver") {
+          if (!window.confirm("Remove the assigned driver? They will be notified and the ride will be open for new offers.")) return;
+          await ShareTripApi.apiFetch(`/api/rides/${targetRideId}/remove-driver`, { method: "POST" });
+          window.location.href = `/ride-details.html?ride=${targetRideId}&driver_removed=1`;
+          return;
+        }
+
         if (action === "accept-offer") {
           await ShareTripApi.apiFetch(
             `/api/rides/${targetRideId}/driver-offers/${offerId}/accept`,
@@ -459,6 +469,7 @@ function bindEvents(rideId) {
           window.location.href = `/ride-details.html?ride=${targetRideId}&offer_responded=1`;
           return;
         }
+
         if (action === "decline-offer") {
           await ShareTripApi.apiFetch(
             `/api/rides/${targetRideId}/driver-offers/${offerId}/decline`,
@@ -467,11 +478,10 @@ function bindEvents(rideId) {
           window.location.reload();
           return;
         }
+
         if (action === "join") {
           const joinDetails = await u().promptJoinPartySize(button.dataset.remainingSeats);
-          if (!joinDetails) {
-            return;
-          }
+          if (!joinDetails) return;
           await ShareTripApi.apiFetch(`/api/rides/${targetRideId}/join`, {
             method: "POST",
             body: JSON.stringify(joinDetails),
@@ -488,11 +498,9 @@ function bindEvents(rideId) {
           );
           const el = document.getElementById(`comment-${commentId}`);
           if (el) el.remove();
-
           const badge = document.querySelector(".ride-comments .section-heading span");
           if (badge) {
-            const count = document.querySelectorAll(".comment-list .comment-item").length;
-            badge.textContent = String(count);
+            badge.textContent = String(document.querySelectorAll(".comment-list .comment-item").length);
           }
           return;
         }
@@ -590,13 +598,10 @@ function bindCommentEditForm() {
       const newBody = formData.get("commentBody");
 
       try {
-        await ShareTripApi.apiFetch(
-          `/api/rides/${rideId}/comments/${commentId}`,
-          {
-            method: "PUT",
-            body: JSON.stringify({ commentBody: newBody }),
-          }
-        );
+        await ShareTripApi.apiFetch(`/api/rides/${rideId}/comments/${commentId}`, {
+          method: "PUT",
+          body: JSON.stringify({ commentBody: newBody }),
+        });
         const idx = detail.comments.findIndex((c) => Number(c.id) === Number(commentId));
         if (idx >= 0) {
           detail.comments[idx] = {
@@ -647,6 +652,7 @@ async function initRideDetailsPage() {
     return;
   }
 
+  if (!(await ShareTripAuth.requireProfile())) return;
   await ShareTripNavbar.renderNavbar("dashboard");
 
   if (query.has("commented")) {
@@ -664,6 +670,14 @@ async function initRideDetailsPage() {
     message = "Driver accepted. The offer stays pending until the driver saves trip details.";
     messageType = "success";
   }
+  if (query.has("resigned")) {
+    message = "You have resigned as driver. The ride owner has been notified.";
+    messageType = "success";
+  }
+  if (query.has("driver_removed")) {
+    message = "The driver has been removed. The ride is now open for new driver offers.";
+    messageType = "success";
+  }
 
   u().stripFlashQueryParams();
 
@@ -671,7 +685,8 @@ async function initRideDetailsPage() {
     const session = await ShareTripAuth.getSession();
     isAuthenticated = Boolean(session.isAuthenticated);
     detail = await ShareTripApi.apiFetch(`/api/rides/${rideId}/detail`);
-    detail.ride.current_user_id = session.userId || null;
+    detail.ride.current_user_id = session.userId;
+    detail.ride.assigned_driver_id = detail.assigned_driver?.id ?? null;
   } catch (error) {
     showDetailError(error.message || "That ride could not be found.");
     return;

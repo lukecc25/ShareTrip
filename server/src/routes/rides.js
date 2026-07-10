@@ -307,4 +307,29 @@ router.put("/:id/passengers/:passengerUserId/pickup-spot", requireApiAuth, async
   }
 });
 
+router.post("/:id/resign-driver", requireApiAuth, async (req, res) => {
+  try {
+    await ridesService.resignAsDriver(req.params.id, req.userId);
+    res.json({ ok: true });
+  } catch (err) {
+    const status = err.message.includes("not the assigned") ? 403
+      : err.message.includes("not found") ? 404
+      : 500;
+    res.status(status).json({ error: err.message });
+  }
+});
+ 
+// Ride owner removes the currently assigned driver.
+router.post("/:id/remove-driver", requireApiAuth, async (req, res) => {
+  try {
+    await ridesService.removeAssignedDriver(req.params.id, req.userId);
+    res.json({ ok: true });
+  } catch (err) {
+    const status = err.message.includes("not found") ? 404
+      : err.message.includes("does not have") ? 400
+      : 500;
+    res.status(status).json({ error: err.message });
+  }
+});
+
 module.exports = router;
