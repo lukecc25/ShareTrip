@@ -19,6 +19,7 @@ let state = {
   editId: 0,
   rides: [],
   profile: null,
+  isAuthenticated: false,
   hideRequestRides: false,
   sameGenderOnly: false,
   offersOnly: false,
@@ -69,6 +70,14 @@ function parseInitialState() {
   if (query.has("commented")) showMessage("commented");
 
   u().stripFlashQueryParams();
+}
+
+function showGuestReadOnlyMessage(action) {
+  state.message =
+    action === "create"
+      ? "Sign in with an existing account to create a ride."
+      : "Sign in with an existing account to join rides or make driver offers.";
+  state.messageType = "error";
 }
 
 async function loadRides() {
@@ -240,6 +249,10 @@ function emptyRidesMessage() {
 }
 
 function renderRequestDriverActions(ride) {
+  if (!state.isAuthenticated) {
+    return "";
+  }
+
   if (ride.is_owner) {
     if (ride.pending_driver_offer_count > 0) {
       return `<a href="/ride-details.html?ride=${ride.id}#driver-offers" class="primary-small-button">Review ${ride.pending_driver_offer_count} offer${ride.pending_driver_offer_count === 1 ? "" : "s"}</a>`;
@@ -307,7 +320,11 @@ function renderRideCard(ride) {
     commentCount > 0 ? ` (${commentCount})` : ""
   }</a>`;
 
-  if (isOwner) {
+  if (!state.isAuthenticated) {
+    if (isOffer && !isOfferPending && remainingSeats <= 0) {
+      footer += `<span class="ride-status full">Full</span>`;
+    }
+  } else if (isOwner) {
     const editLabel = isOfferPending ? "Complete offer" : "Edit";
     footer += `
       <div class="ride-owner-actions">
@@ -339,6 +356,10 @@ function renderRideCard(ride) {
   const flexibleBadge = ride.flexible
     ? '<span class="flexible-badge">Flexible</span>'
     : "";
+  const pendingDriverOfferBadge =
+    !isOffer && ride.pending_driver_offer_count > 0 && !ride.has_assigned_driver
+      ? '<span class="ride-status pending-badge">Driver offer pending</span>'
+      : "";
 
   const offerDetails =
     isOffer && !isOfferPending
@@ -370,6 +391,7 @@ function renderRideCard(ride) {
           <span class="ride-type ${typeClass}">${escapeHtml(typeLabel)}</span>
           ${pastBadge}
           ${flexibleBadge}
+          ${pendingDriverOfferBadge}
         </div>
         ${priceBlock}
       </div>
@@ -508,13 +530,19 @@ function renderRideForm(ride) {
 function updateStaticChrome() {
   const welcomeName = state.profile
     ? `${state.profile.fname} ${state.profile.lname}`.trim()
-    : "there";
+    : "guest";
 
   document.getElementById("welcome-eyebrow").textContent = `Welcome, ${welcomeName}`;
 
   const createLink = document.getElementById("create-ride-link");
   if (createLink) {
     createLink.href = `/dashboard.html?showForm=1&scope=${state.scope}#createRideForm`;
+    createLink.hidden = !state.isAuthenticated;
+  }
+
+  const guestCta = document.getElementById("guest-ride-board-cta");
+  if (guestCta) {
+    guestCta.hidden = state.isAuthenticated;
   }
 
   const headerBlurb = document.querySelector(".dashboard-header > div > p:last-of-type");
@@ -526,9 +554,13 @@ function updateStaticChrome() {
   }
 
   document.getElementById("filter-all").classList.toggle("active", state.scope === "all");
+  const myFilter = document.getElementById("filter-my");
   document.getElementById("filter-my").classList.toggle("active", state.scope === "my");
   document.getElementById("filter-all").href = filterUrl("all", state.search);
   document.getElementById("filter-my").href = filterUrl("my", state.search);
+  if (myFilter) {
+    myFilter.hidden = !state.isAuthenticated;
+  }
 
   document.getElementById("search-scope").value = state.scope;
   document.getElementById("rideSearch").value = state.search;
@@ -541,7 +573,7 @@ function updateStaticChrome() {
     clearSearch.hidden = true;
   }
 
-  const showAllFilters = state.scope === "all";
+  const showAllFilters = state.scope === "all" && state.isAuthenticated;
 
   // Toggle filter panel visibility.
   const filterPanel = document.getElementById("advanced-filter-panel");
@@ -663,6 +695,11 @@ function renderForm() {
     updateStaticChrome();
   }
 
+  if (!state.isAuthenticated && (state.showForm || state.editId)) {
+    container.innerHTML = "";
+    return;
+  }
+
   if (state.showForm || state.editId) {
     container.innerHTML = renderRideForm(editRide);
     bindFormEvents();
@@ -685,7 +722,7 @@ function updateComposeMode() {
     ridesContainer.hidden = composing;
   }
   if (createLink) {
-    createLink.hidden = composing;
+    createLink.hidden = composing || !state.isAuthenticated;
   }
 
   document.body.classList.toggle("dashboard-compose-mode", composing);
@@ -1048,7 +1085,7 @@ function bindRideActions() {
 function showFatalError(message) {
   document.getElementById("rides-container").innerHTML = `
     <section class="empty-rides">
-      <h2>Could not load dashboard</h2>
+      <h2>Could not load Ride Board</h2>
       <p>${u().escapeHtml(message)}</p>
       <p><a href="/sign-in.html">Sign in</a> or <a href="/index.html">return home</a>.</p>
     </section>`;
@@ -1071,14 +1108,29 @@ async function initDashboardPage() {
   bindLocationFilter();
   bindDateFilter();
 
-  const profile = await ShareTripAuth.requireProfile();
-  if (!profile) {
-    return;
+  const session = await ShareTripAuth.getSession();
+  state.isAuthenticated = Boolean(session.isAuthenticated);
+
+  if (!state.isAuthenticated) {
+    if (state.scope === "my") {
+      state.scope = "all";
+    }
+    if (state.showForm || state.editId) {
+      state.showForm = false;
+      state.editId = 0;
+      showGuestReadOnlyMessage("create");
+    }
+  } else {
+    const profile = await ShareTripAuth.requireProfile();
+    if (!profile) {
+      return;
+    }
+
+    state.profile = profile;
+    state.hideRequestRides = u().loadHideRequestRidesPreference(profile);
+    state.sameGenderOnly = u().loadSameGenderOnlyPreference();
   }
 
-  state.profile = profile;
-  state.hideRequestRides = u().loadHideRequestRidesPreference(profile);
-  state.sameGenderOnly = u().loadSameGenderOnlyPreference();
   await ShareTripNavbar.renderNavbar("dashboard");
 
   if (state.editId) {
@@ -1098,7 +1150,7 @@ async function initDashboardPage() {
 
   render();
 
-  if (window.ShareTripNotifications) {
+  if (state.isAuthenticated && window.ShareTripNotifications) {
     await ShareTripNotifications.showNotificationBanner();
   }
 

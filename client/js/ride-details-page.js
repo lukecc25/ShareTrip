@@ -5,6 +5,7 @@ function u() {
 let detail = null;
 let message = "";
 let messageType = "success";
+let isAuthenticated = false;
 
 function genderClass(gender) {
   return String(gender || "").toLowerCase() === "female" ? "female" : "male";
@@ -108,7 +109,7 @@ function renderPersonCard(person, ride, role) {
   const { escapeHtml, formatRatingValue, fullName } = u();
   const isDriver = role === "driver";
   const userId = person.user_id || person.id || (isDriver ? ride.owner_id : null);
-  const canRate = ride.ride_completed && userId !== ride.current_user_id;
+  const canRate = isAuthenticated && ride.ride_completed && userId !== ride.current_user_id;
 
   const drivenCount = isDriver
     ? (ride.driver_driven_count ?? person.driven_count ?? 0)
@@ -177,7 +178,7 @@ function renderPersonCard(person, ride, role) {
               },
               role
             )
-          : userId !== ride.current_user_id
+          : isAuthenticated && userId !== ride.current_user_id
             ? '<p class="rating-unavailable">Ratings open after the ride is completed.</p>'
             : ""
       }
@@ -314,6 +315,8 @@ function render() {
       actions = isOfferPending
         ? '<span class="ride-status pending-badge">Offer pending</span>'
         : '<span class="ride-status">Joined</span>';
+    } else if (!isAuthenticated) {
+      actions = "";
     } else if (!isOfferPending && remainingSeats > 0) {
       actions = `<button type="button" class="primary-small-button" data-action="join" data-ride-id="${ride.id}" data-remaining-seats="${remainingSeats}">Join Ride</button>`;
     } else if (!isOfferPending) {
@@ -335,6 +338,10 @@ function render() {
   const assignedDriverHtml =
     !isOffer && detail.assigned_driver
       ? `<div class="assigned-driver-row"><span>Assigned driver</span><div><strong>${escapeHtml(fullName(detail.assigned_driver))}</strong>${renderViewProfileLink(detail.assigned_driver.id)}</div></div>`
+      : "";
+  const pendingDriverOfferHtml =
+    !isOffer && ride.pending_driver_offer_count > 0 && !ride.has_assigned_driver
+      ? `<div><span>Status</span><strong>Driver offer pending</strong></div>`
       : "";
 
   const commentsHtml =
@@ -365,6 +372,7 @@ function render() {
           <div><span>End</span><strong>${escapeHtml(formatDateValue(ride.end_date))}</strong></div>
           ${ride.departure_time ? `<div><span>Departure time</span><strong>${escapeHtml(ride.departure_time)}</strong></div>` : ""}
           <div><span>Trip</span><strong>${ride.roundtrip ? "Round trip" : "One way"}</strong></div>
+          ${pendingDriverOfferHtml}
           ${
             isOffer && !isOfferPending
               ? `<div><span>Passenger Seats</span><strong>${remainingSeats}/${totalSeats}</strong></div>
@@ -400,11 +408,15 @@ function render() {
       <section class="detail-card detail-section ride-comments" id="comments">
         <div class="section-heading"><h2>Comments</h2><span>${detail.comments.length}</span></div>
         <div class="comment-list" id="comment-list">${commentsHtml}</div>
-        <form class="comment-form" id="commentForm">
-          <label for="commentBody">Add a comment</label>
-          <textarea id="commentBody" name="commentBody" maxlength="500" rows="3" required></textarea>
-          <button type="submit">Post</button>
-        </form>
+        ${
+          isAuthenticated
+            ? `<form class="comment-form" id="commentForm">
+                <label for="commentBody">Add a comment</label>
+                <textarea id="commentBody" name="commentBody" maxlength="500" rows="3" required></textarea>
+                <button type="submit">Post</button>
+              </form>`
+            : '<p class="no-comments">Sign in with an existing account to comment or join this ride.</p>'
+        }
       </section>
     </main>
   `;
@@ -671,6 +683,7 @@ async function initRideDetailsPage() {
 
   try {
     const session = await ShareTripAuth.getSession();
+    isAuthenticated = Boolean(session.isAuthenticated);
     detail = await ShareTripApi.apiFetch(`/api/rides/${rideId}/detail`);
     detail.ride.current_user_id = session.userId;
     detail.ride.assigned_driver_id = detail.assigned_driver?.id ?? null;

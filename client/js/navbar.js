@@ -56,7 +56,7 @@ async function renderNavbar(active = "") {
     const dashboardLink = document.createElement("a");
     dashboardLink.href = "/dashboard.html";
     dashboardLink.className = `nav-link${active === "dashboard" ? " active" : ""}`;
-    dashboardLink.textContent = "Dashboard";
+    dashboardLink.textContent = "Ride Board";
 
     const howItWorksLink = document.createElement("a");
     howItWorksLink.href = "/how-it-works.html";
@@ -108,6 +108,25 @@ async function renderNavbar(active = "") {
 
     return;
   }
+
+  const howItWorksLink = document.createElement("a");
+  howItWorksLink.href = "/how-it-works.html";
+  howItWorksLink.className = `nav-link${active === "how-it-works" ? " active" : ""}`;
+  howItWorksLink.textContent = "How It Works";
+
+  const rideBoardLink = document.createElement("a");
+  rideBoardLink.href = "/dashboard.html";
+  rideBoardLink.className = `nav-link${active === "dashboard" ? " active" : ""}`;
+  rideBoardLink.textContent = "Ride Board";
+
+  const donationLink = document.createElement("a");
+  donationLink.href = "/donations.html";
+  donationLink.className = `nav-link${active === "donations" ? " active" : ""}`;
+  donationLink.textContent = "Donate";
+
+  primaryContainer.appendChild(howItWorksLink);
+  primaryContainer.appendChild(rideBoardLink);
+  primaryContainer.appendChild(donationLink);
 
   const loginLink = document.createElement("a");
   loginLink.href = "/sign-in.html";

@@ -66,6 +66,39 @@ body.donation-body {
     border-color: #fecaca;
 }
 
+.guest-ride-board-cta {
+    align-items: center;
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-left: 4px solid #2563eb;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    display: flex;
+    gap: 18px;
+    justify-content: space-between;
+    margin: -10px 0 24px;
+    padding: 16px 18px;
+}
+
+.guest-ride-board-cta[hidden] {
+    display: none;
+}
+
+.guest-ride-board-cta strong {
+    color: #0f172a;
+    display: block;
+    font-size: 16px;
+    margin-bottom: 4px;
+}
+
+.guest-ride-board-cta p {
+    color: #475569;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.45;
+    margin: 0;
+}
+
 .dashboard-header-actions,
 .notification-header-card,
 .donation-hero {
@@ -1330,6 +1363,7 @@ body.donation-body {
     }
 
     .dashboard-header,
+    .guest-ride-board-cta,
     .form-panel-header,
     .ride-filter-panel {
         display: grid;

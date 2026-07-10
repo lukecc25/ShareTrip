@@ -78,9 +78,12 @@ router.post(
   }
 );
 
-router.get("/:id/detail", requireApiAuth, async (req, res) => {
+router.get("/:id/detail", async (req, res) => {
   try {
-    const detail = await ridesService.getRideDetail(req.params.id, req.userId);
+    const detail = await ridesService.getRideDetail(
+      req.params.id,
+      sessionUserId(req)
+    );
     if (!detail) {
       res.status(404).json({ error: "Ride not found." });
       return;

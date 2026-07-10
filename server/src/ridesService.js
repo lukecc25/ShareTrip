@@ -858,6 +858,13 @@ async function getRideDetail(rideId, currentUserId) {
     }
   }
 
+  const visiblePeople = currentUserId
+    ? people
+    : people.map(({ email, phone, guest_details, ...person }) => ({
+        ...person,
+        guest_details: [],
+      }));
+
   return {
     ride: {
       ...ride,
@@ -869,7 +876,7 @@ async function getRideDetail(rideId, currentUserId) {
       current_user_driver_rating_comment: driverRating?.comment ?? "",
       ride_completed: rideCompleted,
     },
-    people,
+    people: visiblePeople,
     comments,
     pending_driver_offers,
     assigned_driver,
