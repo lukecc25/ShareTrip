@@ -176,6 +176,35 @@ async function verifyLogin(email, password) {
   return getAccountById(account.id);
 }
 
+async function changePassword(id, currentPassword, newPassword) {
+  if (!currentPassword || !newPassword) {
+    throw new Error("Current password and new password are required.");
+  }
+  if (newPassword.length < 6) {
+    throw new Error("New password must be at least 6 characters.");
+  }
+
+  const existing = throwIfError(
+    await getSupabase().from("accounts").select("*").eq("id", id).maybeSingle()
+  );
+  if (!existing) {
+    throw new Error("Account not found.");
+  }
+
+  const valid = await bcrypt.compare(currentPassword, existing.password_hash);
+  if (!valid) {
+    throw new Error("Current password is incorrect.");
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  throwIfError(
+    await getSupabase()
+      .from("accounts")
+      .update({ password_hash: passwordHash, updated_at: now() })
+      .eq("id", id)
+  );
+}
+
 async function updateAccount(id, data) {
   const normalizedEmail = data.email.trim().toLowerCase();
   const conflict = throwIfError(
@@ -260,4 +289,5 @@ module.exports = {
   createAccount,
   verifyLogin,
   updateAccount,
+  changePassword,
 };
