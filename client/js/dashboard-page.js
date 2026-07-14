@@ -30,7 +30,10 @@ let state = {
   filtersVisible: false,
   message: "",
   messageType: "success",
+  ridePage: 1,
 };
+
+const RIDES_PER_PAGE = 9;
 
 const IDAHO_ADJACENT_STATES = [
   "Idaho",
@@ -224,6 +227,106 @@ function visibleRides() {
     return rides.filter((r) => !isFullOfferRide(r));
   }
   return rides;
+}
+
+function resetRidePage() {
+  state.ridePage = 1;
+}
+
+function getRidePagination(rides) {
+  const totalRides = rides.length;
+  const totalPages = Math.max(1, Math.ceil(totalRides / RIDES_PER_PAGE));
+  const page = Math.min(Math.max(1, state.ridePage), totalPages);
+  state.ridePage = page;
+  const start = (page - 1) * RIDES_PER_PAGE;
+
+  return {
+    pageRides: rides.slice(start, start + RIDES_PER_PAGE),
+    page,
+    totalPages,
+    totalRides,
+    hasNext: page < totalPages,
+    hasPrev: page > 1,
+  };
+}
+
+function renderRidePagination(pagination) {
+  if (pagination.totalRides <= RIDES_PER_PAGE) {
+    return "";
+  }
+
+  return `
+    <nav class="ride-board-pagination" aria-label="Ride board pages">
+      <button type="button" class="secondary-button ride-board-page-btn ride-board-page-btn--icon" data-action="ride-page-first" aria-label="First page"${pagination.page > 1 ? "" : " disabled"}>«</button>
+      <button type="button" class="secondary-button ride-board-page-btn ride-board-page-btn--icon" data-action="ride-page-prev" aria-label="Previous page"${pagination.hasPrev ? "" : " disabled"}>‹</button>
+      <label class="ride-board-page-status">
+        Page
+        <input
+          type="number"
+          class="ride-board-page-input"
+          min="1"
+          max="${pagination.totalPages}"
+          value="${pagination.page}"
+          aria-label="Current page"
+        >
+        of ${pagination.totalPages}
+      </label>
+      <button type="button" class="secondary-button ride-board-page-btn ride-board-page-btn--icon" data-action="ride-page-next" aria-label="Next page"${pagination.hasNext ? "" : " disabled"}>›</button>
+      <button type="button" class="secondary-button ride-board-page-btn ride-board-page-btn--icon" data-action="ride-page-last" aria-label="Last page"${pagination.page < pagination.totalPages ? "" : " disabled"}>»</button>
+    </nav>`;
+}
+
+function goToRidePage(page) {
+  const pageInput = document.querySelector(".ride-board-page-input");
+  const max = Number(pageInput?.max) || 1;
+  state.ridePage = Math.min(Math.max(1, Math.floor(Number(page) || 1)), max);
+  renderRides();
+  document.getElementById("rides-container")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function bindRidePagination() {
+  document
+    .querySelectorAll(
+      "[data-action='ride-page-first'], [data-action='ride-page-prev'], [data-action='ride-page-next'], [data-action='ride-page-last']"
+    )
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        if (button.disabled) {
+          return;
+        }
+        const pageInput = document.querySelector(".ride-board-page-input");
+        const max = Number(pageInput?.max) || 1;
+        switch (button.dataset.action) {
+          case "ride-page-first":
+            goToRidePage(1);
+            break;
+          case "ride-page-prev":
+            goToRidePage(state.ridePage - 1);
+            break;
+          case "ride-page-next":
+            goToRidePage(state.ridePage + 1);
+            break;
+          case "ride-page-last":
+            goToRidePage(max);
+            break;
+          default:
+            break;
+        }
+      });
+    });
+
+  const pageInput = document.querySelector(".ride-board-page-input");
+  if (pageInput) {
+    pageInput.addEventListener("change", () => {
+      goToRidePage(pageInput.value);
+    });
+    pageInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        pageInput.blur();
+      }
+    });
+  }
 }
 
 function hiddenFullRidesCount() {
@@ -693,9 +796,10 @@ function renderRides() {
 
   const rides = visibleRides();
   const banner = renderFullRidesBanner();
+  const pagination = getRidePagination(rides);
 
   if (rides.length > 0) {
-    container.innerHTML = `${banner}<section class="ride-grid">${rides.map(renderRideCard).join("")}</section>`;
+    container.innerHTML = `${banner}<section class="ride-grid">${pagination.pageRides.map(renderRideCard).join("")}</section>${renderRidePagination(pagination)}`;
   } else {
     container.innerHTML = `
       ${banner}
@@ -707,6 +811,7 @@ function renderRides() {
 
   bindRideActions();
   bindFullRidesBanner();
+  bindRidePagination();
 }
 
 function renderFullRidesBanner() {
@@ -729,6 +834,7 @@ function bindFullRidesBanner() {
   }
   btn.addEventListener("click", () => {
     state.showFull = true;
+    resetRidePage();
     const checkbox = document.querySelector("#show-full-filter input[type='checkbox']");
     if (checkbox) {
       checkbox.checked = true;
@@ -943,6 +1049,7 @@ function bindRequestRideFilter() {
     }
     state.hideRequestRides = checkbox.checked;
     u().saveHideRequestRidesPreference(state.hideRequestRides);
+    resetRidePage();
     render();
   });
 }
@@ -961,6 +1068,7 @@ function bindSameGenderFilter() {
   checkbox.addEventListener("change", () => {
     state.sameGenderOnly = checkbox.checked;
     u().saveSameGenderOnlyPreference(state.sameGenderOnly);
+    resetRidePage();
     render();
   });
 }
@@ -978,6 +1086,7 @@ function bindOffersOnlyFilter() {
 
   checkbox.addEventListener("change", () => {
     state.offersOnly = checkbox.checked;
+    resetRidePage();
     render();
   });
 }
@@ -989,6 +1098,7 @@ function bindShowFullFilter() {
   if (!checkbox) return;
   checkbox.addEventListener("change", () => {
     state.showFull = checkbox.checked;
+    resetRidePage();
     render();
   });
 }
@@ -998,6 +1108,7 @@ function bindStateFilter() {
   if (!select) return;
   select.addEventListener("change", () => {
     state.stateFilter = select.value;
+    resetRidePage();
     render();
   });
 }
@@ -1009,6 +1120,7 @@ function bindLocationFilter() {
   }
   locationSelect.addEventListener("change", () => {
     state.locationFilter = locationSelect.value;
+    resetRidePage();
     render();
   });
 }
@@ -1021,12 +1133,14 @@ function bindDateFilter() {
   if (fromInput) {
     fromInput.addEventListener("input", () => {
       state.dateFrom = fromInput.value;
+      resetRidePage();
       renderRides();
     });
   }
   if (toInput) {
     toInput.addEventListener("input", () => {
       state.dateTo = toInput.value;
+      resetRidePage();
       renderRides();
     });
   }
@@ -1052,6 +1166,7 @@ function bindDateFilter() {
       if (showFullCheckbox) showFullCheckbox.checked = false;
       u().saveHideRequestRidesPreference(false);
       u().saveSameGenderOnlyPreference(false);
+      resetRidePage();
       render();
     });
   }

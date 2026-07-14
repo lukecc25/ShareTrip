@@ -734,6 +734,67 @@ body.donation-body {
     gap: 20px;
 }
 
+.ride-board-pagination {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 24px;
+}
+
+.ride-board-page-status {
+    align-items: center;
+    color: #475569;
+    display: inline-flex;
+    font-size: 14px;
+    font-weight: 700;
+    gap: 8px;
+}
+
+.ride-board-page-input {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 6px 8px;
+    text-align: center;
+    width: 4.5rem;
+    -moz-appearance: textfield;
+}
+
+.ride-board-page-input::-webkit-outer-spin-button,
+.ride-board-page-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.ride-board-page-input:focus {
+    border-color: #2563eb;
+    outline: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.ride-board-page-btn--icon {
+    font-size: 18px;
+    line-height: 1;
+    min-width: 40px;
+    padding-inline: 10px;
+}
+
+.ride-board-page-btn.secondary-button {
+    border: 1px solid #cbd5e1;
+}
+
+.ride-board-page-btn.secondary-button:hover:not(:disabled) {
+    border-color: #94a3b8;
+}
+
+.ride-board-page-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
 .ride-card {
     background: white;
     border: 1px solid #e2e8f0;
