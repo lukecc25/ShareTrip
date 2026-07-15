@@ -20,9 +20,9 @@ let state = {
   rides: [],
   profile: null,
   isAuthenticated: false,
-  hideRequestRides: false,
   sameGenderOnly: false,
   offersOnly: false,
+  requestsOnly: false,
   showFull: false,
   locationFilter: "",  // state name, "Other", or "" for all
   dateFrom: "",
@@ -195,11 +195,11 @@ function ridesBeforeFullFilter() {
   let rides = state.rides;
 
   if (state.scope === "all") {
-    if (state.hideRequestRides) {
-      rides = rides.filter(isOfferRide);
-    }
     if (state.offersOnly) {
       rides = rides.filter(isOfferRide);
+    }
+    if (state.requestsOnly) {
+      rides = rides.filter((r) => !isOfferRide(r));
     }
     if (state.sameGenderOnly) {
       rides = rides.filter(matchesSameGenderFilter);
@@ -342,8 +342,11 @@ function emptyRidesMessage() {
   }
 
   const parts = [];
-  if (state.hideRequestRides || state.offersOnly) {
+  if (state.offersOnly) {
     parts.push("driver requests are hidden");
+  }
+  if (state.requestsOnly) {
+    parts.push("ride offers are hidden");
   }
   if (state.sameGenderOnly) {
     parts.push("only rides posted by people with the same gender as you are shown");
@@ -698,45 +701,47 @@ function updateStaticChrome() {
   const filterPanel = document.getElementById("advanced-filter-panel");
   if (filterPanel) {
     filterPanel.hidden = !state.filtersVisible || !showAllFilters;
-    
+  }
+
   const ridefilterPanelEl = document.getElementById("ride-filter-panel");
   if (ridefilterPanelEl) {
     ridefilterPanelEl.classList.toggle("filters-open", state.filtersVisible && showAllFilters);
   }
-  }
 
-    // Update the toggle button state.
+  // Update the toggle button state.
   const filterToggleBtn = document.getElementById("filter-toggle-btn");
   if (filterToggleBtn) {
     filterToggleBtn.hidden = !showAllFilters;
     filterToggleBtn.classList.toggle("active", state.filtersVisible);
     const label = document.getElementById("filter-toggle-label");
     if (label) {
-        const activeFilterCount = [
-          state.offersOnly,
-          state.showFull,
-          state.hideRequestRides,
-          state.sameGenderOnly,
-          state.stateFilter,
-          state.locationFilter.trim(),
-          state.dateFrom.trim(),
-          state.dateTo.trim(),
-        ].filter(Boolean).length;
+      const activeFilterCount = [
+        state.offersOnly,
+        state.requestsOnly,
+        state.showFull,
+        state.sameGenderOnly,
+        state.stateFilter,
+        state.locationFilter.trim(),
+        state.dateFrom.trim(),
+        state.dateTo.trim(),
+      ].filter(Boolean).length;
       label.textContent = activeFilterCount > 0 ? `Filters (${activeFilterCount})` : "Filters";
     }
   }
 
-  const requestFilter = document.getElementById("hide-request-rides-filter");
-  if (requestFilter) {
-    requestFilter.hidden = !showMemberFilters;
-    if (showMemberFilters) {
-      const checkbox = requestFilter.querySelector('input[type="checkbox"]');
+  // Offers-only filter checkbox. Also doubles as "hide driver requests":
+  // non-drivers can't act on request rides, so it's forced on and locked
+  // for them, same as the old dedicated toggle used to do.
+  const offersOnlyFilter = document.getElementById("offers-only-filter");
+  if (offersOnlyFilter) {
+    if (showAllFilters) {
+      const checkbox = offersOnlyFilter.querySelector('input[type="checkbox"]');
       if (checkbox) {
         if (!u().isAbleDriver(state.profile)) {
-          state.hideRequestRides = true;
-          u().saveHideRequestRidesPreference(true);
+          state.offersOnly = true;
+          u().saveOffersOnlyPreference(true);
         }
-        checkbox.checked = state.hideRequestRides;
+        checkbox.checked = state.offersOnly;
         checkbox.disabled = !u().isAbleDriver(state.profile);
       }
     }
@@ -753,13 +758,19 @@ function updateStaticChrome() {
     }
   }
 
-  // Offers-only filter checkbox.
-  const offersOnlyFilter = document.getElementById("offers-only-filter");
-  if (offersOnlyFilter) {
+  // Requests-only filter checkbox. Mutually exclusive with "Offers only"
+  // (checking both would always show zero rides). Doesn't make sense for
+  // non-drivers, who already have "Offers only" forced on above.
+  const requestsOnlyFilter = document.getElementById("requests-only-filter");
+  if (requestsOnlyFilter) {
     if (showAllFilters) {
-      const checkbox = offersOnlyFilter.querySelector('input[type="checkbox"]');
+      const checkbox = requestsOnlyFilter.querySelector('input[type="checkbox"]');
       if (checkbox) {
-        checkbox.checked = state.offersOnly;
+        if (!u().isAbleDriver(state.profile)) {
+          state.requestsOnly = false;
+        }
+        checkbox.checked = state.requestsOnly;
+        checkbox.disabled = !u().isAbleDriver(state.profile);
       }
     }
   }
@@ -839,7 +850,7 @@ function bindFullRidesBanner() {
     if (checkbox) {
       checkbox.checked = true;
     }
-    renderRides();
+    render();
   });
 }
 
@@ -1028,32 +1039,6 @@ function bindFilterToggle() {
   });
 }
 
-function bindRequestRideFilter() {
-  const requestFilter = document.getElementById("hide-request-rides-filter");
-  if (!requestFilter) {
-    return;
-  }
-
-  const checkbox = requestFilter.querySelector('input[type="checkbox"]');
-  if (!checkbox) {
-    return;
-  }
-
-  checkbox.addEventListener("change", () => {
-    if (!u().isAbleDriver(state.profile)) {
-      state.hideRequestRides = true;
-      checkbox.checked = true;
-      u().saveHideRequestRidesPreference(true);
-      render();
-      return;
-    }
-    state.hideRequestRides = checkbox.checked;
-    u().saveHideRequestRidesPreference(state.hideRequestRides);
-    resetRidePage();
-    render();
-  });
-}
-
 function bindSameGenderFilter() {
   const genderFilter = document.getElementById("same-gender-only-filter");
   if (!genderFilter) {
@@ -1066,10 +1051,16 @@ function bindSameGenderFilter() {
   }
 
   checkbox.addEventListener("change", () => {
+    if (!u().isAbleDriver(state.profile)) {
+      state.hideRequestRides = true;
+      checkbox.checked = true;
+      u().saveHideRequestRidesPreference(true);
+      render();
+      return;
+    }
     state.sameGenderOnly = checkbox.checked;
     u().saveSameGenderOnlyPreference(state.sameGenderOnly);
     resetRidePage();
-    render();
   });
 }
 
@@ -1085,9 +1076,40 @@ function bindOffersOnlyFilter() {
   }
 
   checkbox.addEventListener("change", () => {
+    if (!u().isAbleDriver(state.profile)) {
+      state.offersOnly = true;
+      checkbox.checked = true;
+      u().saveOffersOnlyPreference(true);
+      resetRidePage();
+      render();
+      return;
+    }
     state.offersOnly = checkbox.checked;
+    if (state.offersOnly) {
+      state.requestsOnly = false;
+    }
+    u().saveOffersOnlyPreference(state.offersOnly);
     resetRidePage();
-    render();
+  });
+}
+
+function bindRequestsOnlyFilter() {
+  const requestsOnlyFilter = document.getElementById("requests-only-filter");
+  if (!requestsOnlyFilter) {
+    return;
+  }
+
+  const checkbox = requestsOnlyFilter.querySelector('input[type="checkbox"]');
+  if (!checkbox) {
+    return;
+  }
+
+  checkbox.addEventListener("change", () => {
+    state.requestsOnly = checkbox.checked;
+    if (state.requestsOnly) {
+      state.offersOnly = false;
+    }
+    resetRidePage();
   });
 }
 
@@ -1132,27 +1154,27 @@ function bindDateFilter() {
 
   if (fromInput) {
     fromInput.addEventListener("input", () => {
-      state.dateFrom = fromInput.value;
-      resetRidePage();
-      renderRides();
-    });
+    state.dateFrom = fromInput.value;
+    resetRidePage();
+    render();
+  });
   }
   if (toInput) {
     toInput.addEventListener("input", () => {
-      state.dateTo = toInput.value;
-      resetRidePage();
-      renderRides();
-    });
+    state.dateTo = toInput.value;
+    resetRidePage();
+    render();
+  });
   }
-    if (clearBtn) {
+  if (clearBtn) {
     clearBtn.addEventListener("click", () => {
       state.dateFrom = "";
       state.dateTo = "";
       state.locationFilter = "";
       state.offersOnly = false;
+      state.requestsOnly = false;
       state.stateFilter = "";
       state.showFull = false;
-      state.hideRequestRides = false;
       state.sameGenderOnly = false;
       if (fromInput) fromInput.value = "";
       if (toInput) toInput.value = "";
@@ -1162,9 +1184,11 @@ function bindDateFilter() {
       if (stateSelect) stateSelect.value = "";
       const offersCheckbox = document.querySelector("#offers-only-filter input");
       if (offersCheckbox) offersCheckbox.checked = false;
+      const requestsCheckbox = document.querySelector("#requests-only-filter input");
+      if (requestsCheckbox) requestsCheckbox.checked = false;
       const showFullCheckbox = document.querySelector("#show-full-filter input");
       if (showFullCheckbox) showFullCheckbox.checked = false;
-      u().saveHideRequestRidesPreference(false);
+      u().saveOffersOnlyPreference(false);
       u().saveSameGenderOnlyPreference(false);
       resetRidePage();
       render();
@@ -1280,9 +1304,9 @@ async function initDashboardPage() {
   parseInitialState();
   bindSearchForm();
   bindFilterToggle();
-  bindRequestRideFilter();
   bindSameGenderFilter();
   bindOffersOnlyFilter();
+  bindRequestsOnlyFilter();
   bindShowFullFilter();
   bindStateFilter();
   bindLocationFilter();
@@ -1307,7 +1331,7 @@ async function initDashboardPage() {
     }
 
     state.profile = profile;
-    state.hideRequestRides = u().loadHideRequestRidesPreference(profile);
+    state.offersOnly = u().loadOffersOnlyPreference(profile);
     state.sameGenderOnly = u().loadSameGenderOnlyPreference();
   }
 

@@ -5,6 +5,7 @@
 }
 
 :root {
+    color-scheme: light;
     --navbar-height: 80px;
     --notification-banner-height: 0px;
     --site-message-height: 0px;

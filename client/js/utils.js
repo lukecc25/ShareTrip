@@ -82,7 +82,7 @@ function routeIconSvg(roundtrip) {
   </svg>`;
 }
 
-const HIDE_REQUEST_RIDES_KEY = "sharetrip-hide-request-rides";
+const OFFERS_ONLY_KEY = "sharetrip-offers-only";
 const SAME_GENDER_ONLY_FILTER_KEY = "sharetrip-same-gender-only-filter";
 
 function ableDriverClass(isAble) {
@@ -93,26 +93,26 @@ function isAbleDriver(profile) {
   return profile?.able_driver !== false && profile?.able_driver !== 0;
 }
 
-function loadHideRequestRidesPreference(profile) {
+function loadOffersOnlyPreference(profile) {
   if (!isAbleDriver(profile)) {
-    saveHideRequestRidesPreference(true);
+    saveOffersOnlyPreference(true);
     return true;
   }
-  const stored = localStorage.getItem(HIDE_REQUEST_RIDES_KEY);
+  const stored = localStorage.getItem(OFFERS_ONLY_KEY);
   if (stored === null) {
     return false;
   }
   return stored === "1";
 }
 
-function applyHideRequestRidesForDriverStatus(profile) {
+function applyOffersOnlyForDriverStatus(profile) {
   if (!isAbleDriver(profile)) {
-    saveHideRequestRidesPreference(true);
+    saveOffersOnlyPreference(true);
   }
 }
 
-function saveHideRequestRidesPreference(hide) {
-  localStorage.setItem(HIDE_REQUEST_RIDES_KEY, hide ? "1" : "0");
+function saveOffersOnlyPreference(offersOnly) {
+  localStorage.setItem(OFFERS_ONLY_KEY, offersOnly ? "1" : "0");
 }
 
 function loadSameGenderOnlyPreference() {
@@ -463,9 +463,9 @@ window.ShareTripUtils = {
   routeIconSvg,
   ableDriverClass,
   isAbleDriver,
-  loadHideRequestRidesPreference,
-  saveHideRequestRidesPreference,
-  applyHideRequestRidesForDriverStatus,
+  loadOffersOnlyPreference,
+  saveOffersOnlyPreference,
+  applyOffersOnlyForDriverStatus,
   loadSameGenderOnlyPreference,
   saveSameGenderOnlyPreference,
   formatDestination,
