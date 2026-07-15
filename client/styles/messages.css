@@ -569,4 +569,14 @@ textarea.ride-details-input {
     .guest-form-row button {
         width: 100%;
     }
+
+    .guest-link-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .guest-copy-btn,
+    .guest-renew-btn {
+        width: 100%;
+    }
 }

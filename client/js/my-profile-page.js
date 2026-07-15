@@ -1001,7 +1001,7 @@ function bindProfileEvents() {
         });
         state.data.profile = updated;
         state.data.stats.able_driver = u().isAbleDriver(updated);
-        u().applyHideRequestRidesForDriverStatus(updated);
+        u().applyOffersOnlyForDriverStatus(updated);
         showMessage(
           updated.able_driver
             ? "You are marked as available to drive."
@@ -1107,7 +1107,7 @@ function bindProfileEvents() {
         });
         state.data.profile = updated;
         state.data.stats.able_driver = u().isAbleDriver(updated);
-        u().applyHideRequestRidesForDriverStatus(updated);
+        u().applyOffersOnlyForDriverStatus(updated);
         state.editing = false;
         state.editProfilePicture = undefined;
         state.profilePhotoSource = null;
