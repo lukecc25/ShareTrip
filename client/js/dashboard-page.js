@@ -99,6 +99,34 @@ function editingRide() {
   return state.rides.find((ride) => Number(ride.id) === state.editId) || null;
 }
 
+function timeInputValue(value) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return "";
+  }
+
+  const twentyFourHour = text.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+  if (twentyFourHour) {
+    return `${twentyFourHour[1].padStart(2, "0")}:${twentyFourHour[2]}`;
+  }
+
+  const twelveHour = text.match(/^(\d{1,2}):([0-5]\d)\s*(AM|PM)$/i);
+  if (!twelveHour) {
+    return "";
+  }
+
+  let hour = Number(twelveHour[1]);
+  const minute = twelveHour[2];
+  const period = twelveHour[3].toUpperCase();
+  if (period === "AM" && hour === 12) {
+    hour = 0;
+  } else if (period === "PM" && hour < 12) {
+    hour += 12;
+  }
+
+  return `${String(hour).padStart(2, "0")}:${minute}`;
+}
+
 function isOfferRide(ride) {
   return String(ride?.ride_type || "").toLowerCase() === "offer";
 }
@@ -563,7 +591,7 @@ function renderRideForm(ride) {
         <div class="form-row">
           <div>
             <label>Pickup Time</label>
-            <input type="time" name="startTime" value="${escapeHtml(ride?.start_time ?? "")}">
+            <input type="time" name="departureTime" value="${escapeHtml(timeInputValue(ride?.departure_time))}">
           </div>
           <div class="flexible-row" style="align-self: end; padding-bottom: 12px;">
             <input type="checkbox" name="flexible" id="flexible" value="1" ${ride?.flexible ? "checked" : ""}>
