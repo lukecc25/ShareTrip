@@ -220,8 +220,26 @@ const DARK_THEME_CSS = `
     color: #cbd5e1;
 }
 
-[data-theme="dark"] .ride-card h2,
-[data-theme="dark"] .form-panel-header h2,
+[data-theme="dark"] .ride-card h2 {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .ride-type-card {
+    background: transparent !important;
+    border: 1.5px solid #475569 !important;
+    color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .ride-type-card:hover {
+    background: transparent !important;
+    border-color: #64748b !important;
+}
+
+[data-theme="dark"] .ride-type-card.active {
+    background: transparent !important;
+    border: 2px solid #93c5fd !important;
+}
+
 [data-theme="dark"] .ride-type-card strong,
 [data-theme="dark"] .join-guest-label,
 [data-theme="dark"] .person-row strong,
@@ -434,6 +452,27 @@ const DARK_THEME_CSS = `
 
 [data-theme="dark"] .join-ride-backdrop {
     background: rgba(2, 6, 23, 0.72);
+}
+
+[data-theme="dark"] .join-ride-dialog h3 {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .join-ride-dialog p {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .join-ride-dialog label {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .join-guest-group {
+    background: #243447;
+    border-color: #475569;
+}
+
+[data-theme="dark"] .join-party-error {
+    color: #fca5a5;
 }
 
 [data-theme="dark"] .ride-filter-tabs a {
@@ -830,6 +869,16 @@ const DARK_THEME_CSS = `
 
 [data-theme="dark"] .threads-empty-note {
     color: #cbd5e1;
+}
+
+[data-theme="dark"] .ride-board-page-status {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .ride-board-page-input {
+    background: #243447;
+    border-color: #475569;
+    color: #f1f5f9;
 }
 
 [data-theme="dark"] .field-hint {
