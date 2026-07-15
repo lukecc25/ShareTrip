@@ -206,6 +206,24 @@ function normalizeDestinationState(value) {
   return trimmed ? trimmed.slice(0, 50) : null;
 }
 
+function normalizeDepartureTime(value) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const twentyFourHour = trimmed.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+  if (!twentyFourHour) {
+    return trimmed.slice(0, 50);
+  }
+
+  const hour24 = Number(twentyFourHour[1]);
+  const minute = twentyFourHour[2];
+  const period = hour24 >= 12 ? "PM" : "AM";
+  const hour12 = hour24 % 12 || 12;
+  return `${hour12}:${minute} ${period}`;
+}
+
 async function saveRide(ownerId, payload) {
   const isOffer = payload.rideType === "offer";
   const roundtrip = payload.tripType === "roundtrip";
@@ -217,6 +235,7 @@ async function saveRide(ownerId, payload) {
     ? normalizeGenderPreference(payload.genderPreference)
     : "No preference";
   const destinationState = normalizeDestinationState(payload.destinationState);
+  const departureTime = normalizeDepartureTime(payload.departureTime || payload.startTime);
   const timestamp = now();
   const sb = getSupabase();
 
@@ -247,7 +266,7 @@ async function saveRide(ownerId, payload) {
           destination_state: destinationState,
           ride_cost: rideCost,
           gender_preference: genderPreference,
-          departure_time: payload.departureTime ? String(payload.departureTime).trim().slice(0, 50) : null,
+          departure_time: departureTime,
           updated_at: timestamp,
         })
         .eq("id", payload.rideId)
@@ -271,7 +290,7 @@ async function saveRide(ownerId, payload) {
         destination_state: destinationState,
         ride_cost: rideCost,
         gender_preference: genderPreference,
-        departure_time: payload.departureTime ? String(payload.departureTime).trim().slice(0, 50) : null,
+        departure_time: departureTime,
         assigned_driver_id: null,
         created_at: timestamp,
         updated_at: timestamp,
