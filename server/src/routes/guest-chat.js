@@ -4,25 +4,6 @@ const guestChatService = require("../guestChatService");
 
 const router = express.Router();
 
-// Driver creates a guest token for a non-account passenger.
-// POST /api/guest-chat/rides/:id/tokens
-router.post("/rides/:id/tokens", requireApiAuth, async (req, res) => {
-  try {
-    const result = await guestChatService.createGuestToken(
-      req.params.id,
-      req.userId,
-      req.body.guest_name,
-      req.body.guest_phone
-    );
-    res.status(201).json(result);
-  } catch (err) {
-    const status = err.message.includes("Only the driver") ? 403
-      : err.message.includes("not found") ? 404
-      : 400;
-    res.status(status).json({ error: err.message });
-  }
-});
-
 // Driver renews an expired (or soon-to-expire) guest token.
 // POST /api/guest-chat/rides/:id/tokens/:tokenId/renew
 router.post("/rides/:id/tokens/:tokenId/renew", requireApiAuth, async (req, res) => {

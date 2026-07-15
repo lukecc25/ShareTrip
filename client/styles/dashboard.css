@@ -61,8 +61,7 @@ body.donation-body {
 .ride-filter-panel,
 .ride-search-row,
 .donation-grid,
-.rating-row,
-.compact-form-grid {
+.rating-row {
     grid-template-columns: 1fr;
 }
 
@@ -105,8 +104,6 @@ body.donation-body {
     margin: 0;
 }
 
-.dashboard-header-actions,
-.notification-header-card,
 .donation-hero {
     align-items: stretch;
     display: grid;
@@ -732,6 +729,7 @@ body.donation-body {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 20px;
+    align-items: stretch;
 }
 
 .ride-board-pagination {
@@ -772,18 +770,21 @@ body.donation-body {
 
 .ride-board-page-input:focus {
     border-color: #2563eb;
-    outline: 1px solid rgba(37, 99, 235, 0.2);
+    outline: 2px solid rgba(37, 99, 235, 0.2);
 }
 
 .ride-board-page-btn--icon {
+    align-items: center;
+    display: inline-flex;
     font-size: 18px;
+    justify-content: center;
     line-height: 1;
     min-width: 40px;
     padding-inline: 10px;
 }
 
 .ride-board-page-btn.secondary-button {
-    border: 1px solid #cbd5e1;
+    border: 2px solid #cbd5e1;
 }
 
 .ride-board-page-btn.secondary-button:hover:not(:disabled) {
@@ -801,6 +802,9 @@ body.donation-body {
     border-radius: 8px;
     padding: 18px;
     box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 .ride-card-top {
@@ -879,6 +883,16 @@ body.donation-body {
     margin-bottom: 16px;
 }
 
+.ride-driver-info {
+    color: #4a5568;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+}
+
+.ride-driver-info strong {
+    color: #2d3748;
+}
+
 .route-title {
     align-items: center;
     display: flex;
@@ -919,6 +933,7 @@ body.donation-body {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
+    flex: 1 1 auto;
 }
 
 .ride-details span {
@@ -1095,19 +1110,35 @@ body.donation-body {
 .ride-card footer {
     color: #64748b;
     font-size: 14px;
-    margin-top: 18px;
+    margin-top: auto;
     padding-top: 14px;
     border-top: 1px solid #e2e8f0;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 14px;
+    flex-shrink: 0;
+}
+
+.ride-card-footer-actions {
+    align-items: center;
+    display: flex;
+    flex: 1 1 auto;
     flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-left: auto;
+    min-width: 0;
+}
+
+.ride-card-footer-actions:empty {
+    display: none;
 }
 
 .details-link,
 .edit-ride-link {
     color: #2563eb;
+    flex-shrink: 0;
     font-weight: 700;
     text-decoration: none;
 }
@@ -1537,6 +1568,7 @@ body.donation-body {
     }
 
     .ride-card footer,
+    .ride-card-footer-actions,
     .ride-owner-actions,
     .inline-ride-form,
     .primary-small-button,
@@ -1547,6 +1579,16 @@ body.donation-body {
 
     .ride-card footer {
         align-items: stretch;
+        flex-direction: column;
+    }
+
+    .ride-card-footer-actions {
+        justify-content: stretch;
+        margin-left: 0;
+    }
+
+    .ride-owner-actions {
+        justify-content: stretch;
     }
 
     .details-link {
@@ -1558,6 +1600,14 @@ body.donation-body {
     .secondary-button,
     .danger-button {
         min-height: 42px;
+    }
+
+    .ride-board-pagination .ride-board-page-btn--icon {
+        flex: 0 0 auto;
+        min-height: 0;
+        min-width: 0;
+        padding: 4px 6px;
+        width: auto;
     }
 
     .detail-route {

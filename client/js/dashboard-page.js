@@ -24,7 +24,7 @@ let state = {
   offersOnly: false,
   requestsOnly: false,
   showFull: false,
-  locationFilter: "",  // state name, "Other", or "" for all
+  stateFilter: "",
   dateFrom: "",
   dateTo: "",
   filtersVisible: false,
@@ -112,29 +112,6 @@ function matchesSameGenderFilter(ride) {
   return ownerGender === userGender;
 }
 
-function rideMatchesState(ride, stateName) {
-  const fields = [
-    ride.destination_state || "",
-    ride.origin || "",
-    ride.destination || "",
-  ];
-  return fields.some((f) =>
-    f.toLowerCase().includes(stateName.toLowerCase())
-  );
-}
-
-function matchesLocationFilter(ride) {
-  const q = state.locationFilter.trim();
-  if (!q) {
-    return true;
-  }
-  if (q === "Other") {
-    // Show rides that don't match any of the listed states.
-    return !IDAHO_ADJACENT_STATES.some((s) => rideMatchesState(ride, s));
-  }
-  return rideMatchesState(ride, q);
-}
-
 // Maps state names to their common abbreviations so "Provo, UT" matches "Utah".
 const STATE_ABBREVIATIONS = {
   Idaho: ["ID"],
@@ -203,9 +180,6 @@ function ridesBeforeFullFilter() {
     }
     if (state.sameGenderOnly) {
       rides = rides.filter(matchesSameGenderFilter);
-    }
-    if (state.locationFilter.trim()) {
-      rides = rides.filter(matchesLocationFilter);
     }
     if (state.stateFilter) {
       rides = rides.filter(matchesStateFilter);
@@ -351,9 +325,6 @@ function emptyRidesMessage() {
   if (state.sameGenderOnly) {
     parts.push("only rides posted by people with the same gender as you are shown");
   }
-  if (state.locationFilter.trim()) {
-    parts.push(`location: ${state.locationFilter.trim()}`);
-  }
   if (state.dateFrom.trim() || state.dateTo.trim()) {
     const from = state.dateFrom.trim();
     const to = state.dateTo.trim();
@@ -437,42 +408,41 @@ function renderRideCard(ride) {
     }
   }
 
-  let footer = `<a href="/ride-details.html?ride=${ride.id}" class="details-link">Details${
-    commentCount > 0 ? ` (${commentCount})` : ""
-  }</a>`;
+  let footerActions = "";
 
   if (!state.isAuthenticated) {
     if (isOffer && !isOfferPending && remainingSeats <= 0) {
-      footer += `<span class="ride-status full">Full</span>`;
+      footerActions = '<span class="ride-status full">Full</span>';
     }
   } else if (isOwner) {
     const editLabel = isOfferPending ? "Complete offer" : "Edit";
-    footer += `
+    footerActions = `
       <div class="ride-owner-actions">
         <a href="/dashboard.html?edit=${ride.id}&showForm=1&scope=${state.scope}#createRideForm" class="edit-ride-link">${editLabel}</a>
         <button type="button" class="danger-button" data-action="cancel" data-ride-id="${ride.id}">Cancel Ride</button>
       </div>`;
     if (isOfferPending) {
-      footer += '<span class="ride-status pending-badge">Awaiting driver details</span>';
+      footerActions += '<span class="ride-status pending-badge">Awaiting driver details</span>';
     }
   } else if (isOffer && hasJoined) {
-    footer += `
+    footerActions = `
       <div class="ride-owner-actions">
         ${isOfferPending ? '<span class="ride-status pending-badge">Offer pending</span>' : '<span class="ride-status">Joined</span>'}
         <button type="button" class="secondary-button" data-action="leave" data-ride-id="${ride.id}">Leave Ride</button>
       </div>`;
   } else if (isOffer && !isOfferPending && remainingSeats > 0) {
-    footer += `<button type="button" class="primary-small-button" data-action="join" data-ride-id="${ride.id}" data-remaining-seats="${remainingSeats}">Join Ride</button>`;
+    footerActions = `<button type="button" class="primary-small-button" data-action="join" data-ride-id="${ride.id}" data-remaining-seats="${remainingSeats}">Join Ride</button>`;
   } else if (isOffer) {
-    footer += `<span class="ride-status full">Full</span>`;
+    footerActions = '<span class="ride-status full">Full</span>';
   } else if (!isOffer) {
-    footer += renderRequestDriverActions(ride);
+    footerActions = renderRequestDriverActions(ride);
   }
 
-  const pastBadge =
-    state.scope === "my" && ride.is_past
-      ? '<span class="ride-time-status">Past</span>'
-      : "";
+  const footer = `
+    <a href="/ride-details.html?ride=${ride.id}" class="details-link">Details${
+      commentCount > 0 ? ` (${commentCount})` : ""
+    }</a>
+    <div class="ride-card-footer-actions">${footerActions}</div>`;
 
   const flexibleBadge = ride.flexible
     ? '<span class="flexible-badge">Flexible</span>'
@@ -510,15 +480,14 @@ function renderRideCard(ride) {
       <div class="ride-card-top">
         <div class="ride-card-badges">
           <span class="ride-type ${typeClass}">${escapeHtml(typeLabel)}</span>
-          ${pastBadge}
           ${flexibleBadge}
           ${pendingDriverOfferBadge}
         </div>
         ${priceBlock}
       </div>
 
-      <div class="ride-driver-info" style="margin-bottom: 10px; font-size: 0.9rem; color: #4a5568;">
-        <span>Driver:</span> <strong style="color: #2d3748;">${escapeHtml(driverNameDisplay)}</strong>
+      <div class="ride-driver-info">
+        <span>Driver:</span> <strong>${escapeHtml(driverNameDisplay)}</strong>
       </div>
 
       <h2 class="route-title">
@@ -721,7 +690,6 @@ function updateStaticChrome() {
         state.showFull,
         state.sameGenderOnly,
         state.stateFilter,
-        state.locationFilter.trim(),
         state.dateFrom.trim(),
         state.dateTo.trim(),
       ].filter(Boolean).length;
@@ -775,10 +743,17 @@ function updateStaticChrome() {
     }
   }
 
-  // Location filter select.
-  const locationSelect = document.getElementById("location-filter-select");
-  if (locationSelect) {
-    locationSelect.value = state.locationFilter;
+  const showFullFilter = document.getElementById("show-full-filter");
+  if (showFullFilter && showAllFilters) {
+    const checkbox = showFullFilter.querySelector('input[type="checkbox"]');
+    if (checkbox) {
+      checkbox.checked = state.showFull;
+    }
+  }
+
+  const stateSelect = document.getElementById("state-filter-select");
+  if (stateSelect && showAllFilters) {
+    stateSelect.value = state.stateFilter || "";
   }
 
   // Date filter inputs.
@@ -1051,16 +1026,10 @@ function bindSameGenderFilter() {
   }
 
   checkbox.addEventListener("change", () => {
-    if (!u().isAbleDriver(state.profile)) {
-      state.hideRequestRides = true;
-      checkbox.checked = true;
-      u().saveHideRequestRidesPreference(true);
-      render();
-      return;
-    }
     state.sameGenderOnly = checkbox.checked;
     u().saveSameGenderOnlyPreference(state.sameGenderOnly);
     resetRidePage();
+    render();
   });
 }
 
@@ -1090,6 +1059,7 @@ function bindOffersOnlyFilter() {
     }
     u().saveOffersOnlyPreference(state.offersOnly);
     resetRidePage();
+    render();
   });
 }
 
@@ -1108,8 +1078,10 @@ function bindRequestsOnlyFilter() {
     state.requestsOnly = checkbox.checked;
     if (state.requestsOnly) {
       state.offersOnly = false;
+      u().saveOffersOnlyPreference(false);
     }
     resetRidePage();
+    render();
   });
 }
 
@@ -1130,18 +1102,6 @@ function bindStateFilter() {
   if (!select) return;
   select.addEventListener("change", () => {
     state.stateFilter = select.value;
-    resetRidePage();
-    render();
-  });
-}
-
-function bindLocationFilter() {
-  const locationSelect = document.getElementById("location-filter-select");
-  if (!locationSelect) {
-    return;
-  }
-  locationSelect.addEventListener("change", () => {
-    state.locationFilter = locationSelect.value;
     resetRidePage();
     render();
   });
@@ -1170,7 +1130,6 @@ function bindDateFilter() {
     clearBtn.addEventListener("click", () => {
       state.dateFrom = "";
       state.dateTo = "";
-      state.locationFilter = "";
       state.offersOnly = false;
       state.requestsOnly = false;
       state.stateFilter = "";
@@ -1178,8 +1137,6 @@ function bindDateFilter() {
       state.sameGenderOnly = false;
       if (fromInput) fromInput.value = "";
       if (toInput) toInput.value = "";
-      const locSelect = document.getElementById("location-filter-select");
-      if (locSelect) locSelect.value = "";
       const stateSelect = document.getElementById("state-filter-select");
       if (stateSelect) stateSelect.value = "";
       const offersCheckbox = document.querySelector("#offers-only-filter input");
@@ -1188,7 +1145,14 @@ function bindDateFilter() {
       if (requestsCheckbox) requestsCheckbox.checked = false;
       const showFullCheckbox = document.querySelector("#show-full-filter input");
       if (showFullCheckbox) showFullCheckbox.checked = false;
-      u().saveOffersOnlyPreference(false);
+      const genderCheckbox = document.querySelector("#same-gender-only-filter input");
+      if (genderCheckbox) genderCheckbox.checked = false;
+      if (!u().isAbleDriver(state.profile)) {
+        state.offersOnly = true;
+        u().saveOffersOnlyPreference(true);
+        if (offersCheckbox) offersCheckbox.checked = true;
+      }
+      u().saveOffersOnlyPreference(state.offersOnly);
       u().saveSameGenderOnlyPreference(false);
       resetRidePage();
       render();
@@ -1309,7 +1273,6 @@ async function initDashboardPage() {
   bindRequestsOnlyFilter();
   bindShowFullFilter();
   bindStateFilter();
-  bindLocationFilter();
   bindDateFilter();
 
   const session = await ShareTripAuth.getSession();

@@ -310,7 +310,7 @@ function getActiveNavFromPath() {
     return "how-it-works";
   }
 
-  if (path === "/my-profile" || path === "/my-profile.html" || path === "/profile" || path === "/profile.html") {
+  if (path === "/my-profile" || path === "/my-profile.html") {
     return "profile";
   }
 

@@ -1,4 +1,6 @@
 const NOTIFICATION_AUTO_DISMISS_MS = 5000;
+const BANNER_SEEN_STORAGE_KEY = "sharetrip.notificationBannerSeenIds";
+const BANNER_SEEN_MAX_IDS = 500;
 const notificationItemTimers = new WeakMap();
 
 async function loadNotifications() {
@@ -7,6 +9,38 @@ async function loadNotifications() {
   } catch {
     return [];
   }
+}
+
+function getBannerSeenIds() {
+  try {
+    const stored = localStorage.getItem(BANNER_SEEN_STORAGE_KEY);
+    if (!stored) {
+      return new Set();
+    }
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed)) {
+      return new Set();
+    }
+    return new Set(parsed.map((id) => Number(id)).filter((id) => Number.isFinite(id)));
+  } catch {
+    return new Set();
+  }
+}
+
+function rememberBannerSeenIds(ids) {
+  const seen = getBannerSeenIds();
+  ids.forEach((id) => seen.add(Number(id)));
+  const trimmed = [...seen].slice(-BANNER_SEEN_MAX_IDS);
+  try {
+    localStorage.setItem(BANNER_SEEN_STORAGE_KEY, JSON.stringify(trimmed));
+  } catch {
+    // Banner may reappear on the next visit if storage is unavailable.
+  }
+}
+
+function filterNotificationsForBanner(notifications) {
+  const seen = getBannerSeenIds();
+  return notifications.filter((item) => !seen.has(Number(item.id)));
 }
 
 function syncSiteHeaderOffset() {
@@ -91,7 +125,7 @@ function renderNotificationBanner(container, notifications) {
   container.querySelectorAll(".notification-item").forEach((itemEl) => {
     const dismissButton = itemEl.querySelector("[data-dismiss-id]");
     dismissButton?.addEventListener("click", () => {
-      dismissNotificationItem(container, itemEl, { markRead: true });
+      dismissNotificationItem(container, itemEl);
     });
 
     notificationItemTimers.set(
@@ -109,7 +143,11 @@ async function showNotificationBanner() {
     return;
   }
   const notifications = await loadNotifications();
-  renderNotificationBanner(container, notifications);
+  const bannerNotifications = filterNotificationsForBanner(notifications);
+  renderNotificationBanner(container, bannerNotifications);
+  if (bannerNotifications.length) {
+    rememberBannerSeenIds(bannerNotifications.map((item) => item.id));
+  }
   window.ShareTripNavbar?.updateNavNotificationBadge?.();
 }
 
@@ -118,8 +156,5 @@ window.addEventListener("resize", () => {
 });
 
 window.ShareTripNotifications = {
-  loadNotifications,
   showNotificationBanner,
-  renderNotificationBanner,
-  syncSiteHeaderOffset,
 };

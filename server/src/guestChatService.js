@@ -220,29 +220,4 @@ async function renewGuestToken(rideId, requestingUserId, tokenId) {
   return { token: updated.token, expires_at: updated.expires_at };
 }
 
-// Lists guest tokens for a ride. Each user only sees tokens they created.
-async function listGuestTokens(rideId, userId) {
-  const store = await fetchStore();
-  const ride = findRide(store, rideId);
-  if (!ride) {
-    throw new Error("Ride not found.");
-  }
-  if (!isThreadParticipant(ride, userId, store)) {
-    throw new Error("You do not have access to this ride.");
-  }
-
-  return (store.guest_tokens || [])
-    .filter(
-      (t) =>
-        Number(t.ride_id) === Number(rideId) && t.created_by === userId
-    )
-    .map((t) => ({
-      id: t.id,
-      guest_name: t.guest_name,
-      guest_phone: t.guest_phone,
-      token: t.token,
-      expires_at: t.expires_at,
-    }));
-}
-
-module.exports = { createGuestToken, resolveGuestToken, sendGuestMessage, listGuestTokens, renewGuestToken };
+module.exports = { createGuestToken, resolveGuestToken, sendGuestMessage, renewGuestToken };
