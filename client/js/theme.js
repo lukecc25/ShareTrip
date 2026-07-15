@@ -134,7 +134,7 @@ const DARK_THEME_CSS = `
 [data-theme="dark"] .messages-sidebar,
 [data-theme="dark"] .ride-details-card,
 [data-theme="dark"] .comment-item,
-[data-theme="dark"] .person-row,
+[data-theme="dark"] .person-card,
 [data-theme="dark"] .join-ride-dialog {
     background: #1e293b;
     border-color: #334155;
@@ -243,6 +243,7 @@ const DARK_THEME_CSS = `
 [data-theme="dark"] .ride-type-card strong,
 [data-theme="dark"] .join-guest-label,
 [data-theme="dark"] .person-row strong,
+[data-theme="dark"] .passenger-guest-list strong,
 [data-theme="dark"] .guest-link-info strong,
 [data-theme="dark"] .guest-name-badge strong,
 [data-theme="dark"] .ride-details-label,
@@ -380,17 +381,14 @@ const DARK_THEME_CSS = `
     border-color: #1e293b;
 }
 
-[data-theme="dark"] .auth-panel,
-[data-theme="dark"] .profile-panel {
+[data-theme="dark"] .auth-panel {
     background: #1e293b;
     border-color: #334155;
     box-shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
 }
 
 [data-theme="dark"] .auth-panel h2,
-[data-theme="dark"] .profile-panel h2,
-[data-theme="dark"] .auth-panel label,
-[data-theme="dark"] .profile-panel label {
+[data-theme="dark"] .auth-panel label {
     color: #f1f5f9;
 }
 
@@ -560,6 +558,30 @@ const DARK_THEME_CSS = `
 [data-theme="dark"] .section-heading span {
     background: #334155;
     color: #e2e8f0;
+}
+
+[data-theme="dark"] .person-row {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .person-name > span:first-child {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .person-row small,
+[data-theme="dark"] .person-name small {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .person-stats span {
+    background: #243447;
+    border-color: #475569;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .rating-pill {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fde68a;
 }
 
 [data-theme="dark"] .detail-summary-grid span {

@@ -159,17 +159,6 @@ function stripFlashQueryParams(keys = FLASH_QUERY_KEYS) {
   window.history.replaceState({}, "", nextUrl);
 }
 
-function setQuery(params) {
-  const url = new URL(window.location.href);
-  url.search = "";
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "") {
-      url.searchParams.set(key, value);
-    }
-  });
-  window.location.href = url.toString();
-}
-
 function formatDestination(ride) {
   const destination = String(ride?.destination || "").trim();
   const state = String(ride?.destination_state || "").trim();
@@ -475,5 +464,4 @@ window.ShareTripUtils = {
   syncSiteHeaderOffset,
   readQuery,
   stripFlashQueryParams,
-  setQuery,
 };

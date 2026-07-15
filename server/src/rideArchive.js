@@ -80,6 +80,5 @@ function saveRidePost(ride, ownerId, action = "created") {
 }
 
 module.exports = {
-  postsDir,
   saveRidePost,
 };
