@@ -153,6 +153,23 @@ router.post("/:id/join", requireApiAuth, async (req, res) => {
   }
 });
 
+router.put("/:id/driver-details", requireApiAuth, async (req, res) => {
+  try {
+    const ride = await ridesService.completeRequestDriverDetails(
+      req.params.id,
+      req.userId,
+      req.body || {}
+    );
+    const archivePath = rideArchive.saveRidePost(ride, req.userId, "driver-details-completed");
+    res.json({ ...ride, archivePath });
+  } catch (err) {
+    const status = err.message.includes("Only the assigned driver") ? 403
+      : err.message.includes("not found") ? 404
+      : 400;
+    res.status(status).json({ error: err.message });
+  }
+});
+
 router.post("/:id/leave", requireApiAuth, async (req, res) => {
   try {
     await ridesService.leaveRide(req.params.id, req.userId);

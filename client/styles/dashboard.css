@@ -516,6 +516,37 @@ body.donation-body {
     gap: 8px;
 }
 
+.driver-details-cancel-link {
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    font: inherit;
+    padding: 0;
+}
+
+body.modal-open {
+    overflow: hidden;
+}
+
+.driver-details-modal-backdrop {
+    align-items: center;
+    background: rgba(15, 23, 42, 0.55);
+    display: flex;
+    inset: 0;
+    justify-content: center;
+    padding: 24px;
+    position: fixed;
+    z-index: 1000;
+}
+
+.driver-details-modal {
+    margin: 0;
+    max-height: min(760px, calc(100vh - 48px));
+    max-width: 760px;
+    overflow: auto;
+    width: min(100%, 760px);
+}
+
 .ride-filter-panel {
     align-items: end;
     background: white;
@@ -706,7 +737,8 @@ body.donation-body {
 }
 
 .ride-form input,
-.ride-form select {
+.ride-form select,
+.ride-form textarea {
     width: 100%;
     border: 1px solid #cbd5e1;
     border-radius: 6px;
@@ -715,9 +747,15 @@ body.donation-body {
 }
 
 .ride-form input:focus,
-.ride-form select:focus {
+.ride-form select:focus,
+.ride-form textarea:focus {
     outline: 2px solid rgba(37, 99, 235, 0.2);
     border-color: #2563eb;
+}
+
+.ride-form textarea {
+    min-height: 104px;
+    resize: vertical;
 }
 
 .ride-form button {
@@ -1117,6 +1155,21 @@ body.donation-body {
     padding-top: 14px;
 }
 
+.request-driver-action-row {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.request-driver-action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    justify-content: flex-end;
+}
+
 .detail-section {
     display: grid;
     gap: 12px;
@@ -1440,6 +1493,21 @@ body.donation-body {
         grid-template-columns: 1fr;
     }
 
+    .driver-details-modal-backdrop {
+        align-items: stretch;
+        padding: 0;
+    }
+
+    .driver-details-modal {
+        border-radius: 0;
+        box-shadow: none;
+        max-height: 100vh;
+        max-width: none;
+        min-height: 100vh;
+        overflow: auto;
+        width: 100%;
+    }
+
     .ride-card footer,
     .ride-owner-actions,
     .inline-ride-form,
@@ -1451,6 +1519,16 @@ body.donation-body {
 
     .ride-card footer {
         align-items: stretch;
+    }
+
+    .request-driver-action-row {
+        align-items: stretch;
+        display: grid;
+    }
+
+    .request-driver-action-buttons {
+        display: grid;
+        gap: 8px;
     }
 
     .details-link {

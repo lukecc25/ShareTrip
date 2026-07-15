@@ -27,6 +27,20 @@ function passengerSeatsUsed(store, rideId) {
     .reduce((sum, passenger) => sum + Math.max(1, Number(passenger.party_size) || 1), 0);
 }
 
+function isRequestDriverDetailsPending(ride, store = null) {
+  const requesterIsPassenger = store
+    ? store.passengers.some(
+        (p) => Number(p.ride_id) === Number(ride?.id) && p.user_id === ride?.owner_id
+      )
+    : true;
+
+  return (
+    ride?.ride_type === "request" &&
+    Boolean(ride.assigned_driver_id) &&
+    (ride.offer_pending === 1 || ride.offer_pending === true || !requesterIsPassenger)
+  );
+}
+
 function nameMatches(account, search) {
   const full = `${account.fname} ${account.lname}`.toLowerCase();
   const q = search.toLowerCase();
@@ -69,6 +83,9 @@ async function upsertProfile(userId, data) {
 
 function enrichRide(row, currentUserId, store) {
   const owner = findAccount(store, row.owner_id);
+  const assignedDriver = row.assigned_driver_id
+    ? findAccount(store, row.assigned_driver_id)
+    : null;
   const pCount = passengerSeatsUsed(store, row.id);
   const currentUserJoined = currentUserId
     ? store.passengers.some(
@@ -81,8 +98,11 @@ function enrichRide(row, currentUserId, store) {
   ).length;
 
   const isOffer = row.ride_type === "offer";
-  const splitCount = isOffer ? pCount + 1 : 1;
-  const splitCost = isOffer ? row.ride_cost / splitCount : 0;
+  const requestDriverDetailsPending = isRequestDriverDetailsPending(row, store);
+  const isCompletedDriverRequest =
+    row.ride_type === "request" && row.assigned_driver_id && !requestDriverDetailsPending;
+  const splitCount = isOffer || isCompletedDriverRequest ? pCount + 1 : 1;
+  const splitCost = isOffer || isCompletedDriverRequest ? row.ride_cost / splitCount : 0;
   const totalSeats = row.seats + pCount;
 
   let my_driver_offer_status = null;
@@ -111,6 +131,9 @@ function enrichRide(row, currentUserId, store) {
     owner_fname: owner?.fname ?? "",
     owner_lname: owner?.lname ?? "",
     owner_gender: owner?.gender ?? "",
+    assigned_driver_fname: assignedDriver?.fname ?? "",
+    assigned_driver_lname: assignedDriver?.lname ?? "",
+    assigned_driver_gender: assignedDriver?.gender ?? "",
     is_past: row.start_date < today() ? 1 : 0,
     passenger_count: pCount,
     current_user_joined: currentUserJoined ? 1 : 0,
@@ -122,6 +145,7 @@ function enrichRide(row, currentUserId, store) {
     my_driver_offer_id,
     pending_driver_offer_count,
     has_assigned_driver: row.assigned_driver_id ? 1 : 0,
+    request_driver_details_pending: requestDriverDetailsPending ? 1 : 0,
   };
 }
 
@@ -134,6 +158,7 @@ async function listRides({ scope = "all", search = "" }, currentUserId) {
     rows = rows.filter(
       (r) =>
         r.owner_id === currentUserId ||
+        r.assigned_driver_id === currentUserId ||
         store.passengers.some(
           (p) =>
             Number(p.ride_id) === Number(r.id) && p.user_id === currentUserId
@@ -448,6 +473,68 @@ async function leaveRide(rideId, userId) {
       .update({ seats: ride.seats + seatsReleased, updated_at: now() })
       .eq("id", rideId)
   );
+}
+
+async function completeRequestDriverDetails(rideId, userId, payload) {
+  const store = await fetchStore();
+  const ride = findRide(store, rideId);
+  if (!ride || ride.ride_type !== "request") {
+    throw new Error("That ride request could not be found.");
+  }
+  if (ride.assigned_driver_id !== userId) {
+    throw new Error("Only the assigned driver can complete trip details.");
+  }
+
+  const seats = Math.max(0, Math.floor(Number(payload.seats) || 0));
+  const rideCost = Math.max(0, Number(payload.rideCost) || 0);
+  const departureTime = normalizeDepartureTime(payload.departureTime || payload.departure_time);
+  const rideNotes = String(payload.rideNotes || payload.ride_notes || "").trim().slice(0, 500);
+  const timestamp = now();
+  const sb = getSupabase();
+
+  throwIfError(
+    await sb
+      .from("rides")
+      .update({
+        seats,
+        ride_cost: rideCost,
+        departure_time: departureTime,
+        ride_notes: rideNotes || null,
+        offer_pending: false,
+        updated_at: timestamp,
+      })
+      .eq("id", Number(rideId))
+      .eq("assigned_driver_id", userId)
+  );
+
+  if (
+    !store.passengers.some(
+      (p) => Number(p.ride_id) === Number(rideId) && p.user_id === ride.owner_id
+    )
+  ) {
+    const passengerResult = await sb.from("passengers").insert({
+      ride_id: Number(rideId),
+      user_id: ride.owner_id,
+      party_size: 1,
+      guest_details: [],
+      created_at: timestamp,
+    });
+    if (passengerResult.error && passengerResult.error.code !== "23505") {
+      throw new Error(passengerResult.error.message);
+    }
+  }
+
+  const driver = findAccount(store, userId);
+  const driverName = driver ? `${driver.fname} ${driver.lname}`.trim() : "Your driver";
+  await createNotification(
+    ride.owner_id,
+    `${driverName} completed trip details for your ride (${formatRideRoute(ride)}).`,
+    "driver_offer_accepted",
+    Number(rideId),
+    null
+  );
+
+  return getRideById(rideId, userId);
 }
 
 async function cancelRide(rideId, ownerId) {
@@ -804,12 +891,15 @@ async function getRideDetail(rideId, currentUserId) {
     });
   }
 
-  const driverStats = getUserRatingStatsFromStore(store, ride.owner_id);
+  const detailDriverId = ride.ride_type === "offer" ? ride.owner_id : ride.assigned_driver_id;
+  const driverStats = detailDriverId
+    ? getUserRatingStatsFromStore(store, detailDriverId)
+    : { driven_count: 0, passenger_count: 0, rating_average: null, rating_count: 0 };
   const driverRating = currentUserId
     ? store.ratings.find(
         (r) =>
           Number(r.ride_id) === Number(rideId) &&
-          r.rated_user_id === ride.owner_id &&
+          r.rated_user_id === detailDriverId &&
           r.rater_user_id === currentUserId
       )
     : null;
@@ -850,7 +940,7 @@ async function getRideDetail(rideId, currentUserId) {
 
   // The actual driver depends on ride type: for an offer, the owner drives.
   // For a request, it's whoever has been accepted via assigned_driver_id.
-  const driverId = ride.ride_type === "offer" ? ride.owner_id : ride.assigned_driver_id;
+  const driverId = detailDriverId;
   const driverAccount = driverId ? findAccount(store, driverId) : null;
   const vehicleInfo = buildVehicleInfo(driverAccount);
 
@@ -1235,6 +1325,8 @@ async function respondToDriverOffer(rideId, offerId, ownerId, accept) {
   const timestamp = now();
 
   if (accept) {
+    const owner = findAccount(store, ride.owner_id);
+    const ownerName = owner ? `${owner.fname} ${owner.lname}`.trim() : "The requester";
     throwIfError(
       await sb
         .from("driver_offers")
@@ -1246,6 +1338,7 @@ async function respondToDriverOffer(rideId, offerId, ownerId, accept) {
         .from("rides")
         .update({
           assigned_driver_id: offer.driver_user_id,
+          offer_pending: true,
           updated_at: timestamp,
         })
         .eq("id", rideId)
@@ -1276,7 +1369,7 @@ async function respondToDriverOffer(rideId, offerId, ownerId, accept) {
 
     await createNotification(
       offer.driver_user_id,
-      "Your offer for a ride has been accepted.",
+      `${ownerName} accepted your driver offer. Complete trip details.`,
       "driver_offer_accepted",
       rideId,
       offerId
@@ -1312,6 +1405,7 @@ module.exports = {
   saveRide,
   joinRide,
   leaveRide,
+  completeRequestDriverDetails,
   cancelRide,
   addComment,
   deleteComment,

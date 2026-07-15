@@ -281,17 +281,28 @@ function renderRequestDriverActions(ride) {
     return "";
   }
 
+  const isDetailsPending = u().isRequestDriverDetailsPending(ride);
+  const isAssignedDriver = ride.assigned_driver_id && ride.assigned_driver_id === state.profile?.id;
+
   if (ride.is_owner) {
     if (ride.pending_driver_offer_count > 0) {
       return `<a href="/ride-details.html?ride=${ride.id}#driver-offers" class="primary-small-button">Review ${ride.pending_driver_offer_count} offer${ride.pending_driver_offer_count === 1 ? "" : "s"}</a>`;
     }
     if (ride.has_assigned_driver) {
-      return '<span class="ride-status">Driver assigned</span>';
+      return isDetailsPending
+        ? '<span class="ride-status pending-badge">Waiting for driver details</span>'
+        : '<span class="ride-status">Driver assigned</span>';
     }
     return "";
   }
 
   if (ride.has_assigned_driver) {
+    if (isAssignedDriver && isDetailsPending) {
+      return `<a href="/ride-details.html?ride=${ride.id}" class="primary-small-button">Complete trip details</a>`;
+    }
+    if (isAssignedDriver) {
+      return '<span class="ride-status">Accepted as driver</span>';
+    }
     return '<span class="ride-status">Driver assigned</span>';
   }
 
@@ -309,13 +320,15 @@ function renderRequestDriverActions(ride) {
 function renderRideCard(ride) {
   const { escapeHtml, formatDateValue, rideTypeLabel, routeIconSvg } = u();
   const isOfferPending = u().isOfferPendingRide(ride);
+  const isRequestDetailsPending = u().isRequestDriverDetailsPending(ride);
   const typeLabel = rideTypeLabel(ride.ride_type, ride);
-  const typeClass = isOfferPending
+  const typeClass = isOfferPending || isRequestDetailsPending
     ? "offer-pending"
     : typeLabel === "Request"
       ? "request"
       : "offer";
   const isOffer = String(ride.ride_type || "").toLowerCase() === "offer";
+  const isCompletedRequest = !isOffer && ride.has_assigned_driver && !isRequestDetailsPending;
   const isOwner = ride.is_owner === 1;
   const hasJoined = ride.current_user_joined === 1;
   const remainingSeats = ride.seats;
@@ -352,6 +365,12 @@ function renderRideCard(ride) {
     if (isOffer && !isOfferPending && remainingSeats <= 0) {
       footer += `<span class="ride-status full">Full</span>`;
     }
+  } else if (isOwner && isRequestDetailsPending) {
+    footer += `
+      <div class="ride-owner-actions">
+        <button type="button" class="danger-button" data-action="cancel" data-ride-id="${ride.id}">Cancel Ride</button>
+      </div>
+      <span class="ride-status pending-badge">Waiting for driver details</span>`;
   } else if (isOwner) {
     const editLabel = isOfferPending ? "Complete offer" : "Edit";
     footer += `
@@ -402,10 +421,22 @@ function renderRideCard(ride) {
       </div>`
       : isOfferPending
         ? `<div><span>Status</span><strong>Driver completing offer details</strong></div>`
-        : "";
+        : isRequestDetailsPending
+          ? `<div><span>Status</span><strong>Waiting for driver details</strong></div>`
+          : isCompletedRequest
+            ? `
+      <div>
+        <span>Passenger Seats</span>
+        <strong>${escapeHtml(remainingSeats)}/${escapeHtml(totalSeats)} Seats Available</strong>
+      </div>
+      <div>
+        <span>Cost</span>
+        <strong>$${Number(splitCost).toFixed(2)} each</strong>
+      </div>`
+            : "";
 
   const priceBlock =
-    isOffer && !isOfferPending
+    (isOffer && !isOfferPending) || isCompletedRequest
       ? `<span class="ride-price">
         <strong>$${Number(splitCost).toFixed(2)}</strong>
         <small>$${Number(ride.ride_cost).toFixed(2)} total</small>
