@@ -73,14 +73,19 @@ function renderGuestPanel() {
 
   const linkItems = state.guestLinks.map((g) => {
     const url = `${window.location.origin}/guest-chat.html?token=${encodeURIComponent(g.token)}`;
+    const isExpired = g.expires_at && new Date(g.expires_at) < new Date();
     return `
       <div class="guest-link-row">
         <div class="guest-link-info">
           <strong>${escapeHtml(g.guest_name)}</strong>
           ${g.guest_phone ? `<span>${escapeHtml(g.guest_phone)}</span>` : ""}
+          ${isExpired ? '<span class="guest-link-expired">Expired</span>' : ""}
         </div>
-        <button type="button" class="secondary-button guest-copy-btn"
-          data-url="${escapeHtml(url)}">Copy link</button>
+        ${
+          isExpired
+            ? `<button type="button" class="secondary-button guest-renew-btn" data-token-id="${escapeHtml(g.id)}">Renew link</button>`
+            : `<button type="button" class="secondary-button guest-copy-btn" data-url="${escapeHtml(url)}">Copy link</button>`
+        }
       </div>`;
   }).join("");
 
@@ -280,6 +285,24 @@ function bindEvents() {
       } catch {
         // Fallback for browsers that block clipboard
         prompt("Copy this link and send it to your passenger:", url);
+      }
+    });
+  });
+
+    // Renew (expired) link buttons
+  document.querySelectorAll(".guest-renew-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      try {
+        await ShareTripApi.apiFetch(
+          `/api/guest-chat/rides/${state.rideId}/tokens/${btn.dataset.tokenId}/renew`,
+          { method: "POST" }
+        );
+        await loadMessages();
+        render();
+      } catch (error) {
+        btn.disabled = false;
+        showMessage(error.message);
       }
     });
   });

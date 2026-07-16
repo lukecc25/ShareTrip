@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="/js/theme.js"></script>
     <title>Support ShareTrip | ShareTrip</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -115,7 +116,35 @@
         const donationHistory = document.getElementById("donationHistory");
         const emptyHistory = document.getElementById("emptyHistory");
         const demoTotal = document.getElementById("demoTotal");
-        const demoDonations = [];
+        const DEMO_DONATIONS_STORAGE_KEY = "sharetrip.demoDonations";
+
+        function loadDemoDonations() {
+            try {
+                const stored = localStorage.getItem(DEMO_DONATIONS_STORAGE_KEY);
+                if (!stored) {
+                    return [];
+                }
+                const parsed = JSON.parse(stored);
+                if (!Array.isArray(parsed)) {
+                    return [];
+                }
+                return parsed.filter(function (donation) {
+                    return donation && Number(donation.amount) > 0 && donation.date;
+                });
+            } catch {
+                return [];
+            }
+        }
+
+        function saveDemoDonations(donations) {
+            try {
+                localStorage.setItem(DEMO_DONATIONS_STORAGE_KEY, JSON.stringify(donations));
+            } catch {
+                // Storage may be unavailable or full; history still shows until refresh.
+            }
+        }
+
+        const demoDonations = loadDemoDonations();
 
         function formatCurrency(amount) {
             return "$" + amount.toFixed(2);
@@ -175,6 +204,7 @@
                 date: new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
             });
 
+            saveDemoDonations(demoDonations);
             renderHistory();
             message.hidden = false;
             message.className = "dashboard-message";

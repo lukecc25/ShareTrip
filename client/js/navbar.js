@@ -13,6 +13,7 @@ async function renderNavbar(active = "") {
         <div class="logo-text">Share<span>Trip</span></div>
       </a>
       <div class="nav-mobile-actions">
+        <div id="nav-mobile-theme" class="nav-mobile-theme"></div>
         <div id="nav-mobile-profile" class="nav-mobile-profile"></div>
         <button id="nav-menu-toggle" class="nav-menu-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false">
           <span></span>
@@ -96,14 +97,16 @@ async function renderNavbar(active = "") {
     primaryContainer.appendChild(mobileProfileLink);
     accountContainer.appendChild(profileLink);
     accountContainer.appendChild(logoutBtn);
+    placeThemeToggleBefore(accountContainer, profileLink);
     if (mobileProfileContainer) {
       mobileProfileContainer.appendChild(mobileProfileIconLink);
     }
+    window.ShareTripTheme?.mountThemeToggle?.(document.getElementById("nav-mobile-theme"));
 
     // Fetch the unread status and add a red dot next to Messages if needed.
     // This is done after the links are rendered so the rest of the navbar
     // never waits on this request.
-    updateNavUnreadDot();
+    updateNavMessagesBadge();
     updateNavNotificationBadge();
 
     return;
@@ -133,6 +136,17 @@ async function renderNavbar(active = "") {
   loginLink.className = "login-btn";
   loginLink.textContent = "Login";
   accountContainer.appendChild(loginLink);
+  placeThemeToggleBefore(accountContainer, loginLink);
+  window.ShareTripTheme?.mountThemeToggle?.(document.getElementById("nav-mobile-theme"));
+}
+
+function placeThemeToggleBefore(container, beforeNode) {
+  if (!container || !beforeNode || !window.ShareTripTheme?.createThemeToggleButton) {
+    return;
+  }
+
+  container.querySelector(".theme-toggle-btn")?.remove();
+  container.insertBefore(window.ShareTripTheme.createThemeToggleButton(), beforeNode);
 }
 
 async function updateNavNotificationBadge() {
@@ -159,21 +173,29 @@ async function updateNavNotificationBadge() {
   }
 }
 
-async function updateNavUnreadDot() {
+async function updateNavMessagesBadge() {
   try {
     const summary = await ShareTripApi.apiFetch("/api/messages/unread-summary");
     const messagesLink = document.querySelector('[data-nav="messages"]');
     if (!messagesLink) {
       return;
     }
-    const existingDot = messagesLink.querySelector(".nav-unread-dot");
-    if (summary.has_unread && !existingDot) {
-      const dot = document.createElement("span");
-      dot.className = "nav-unread-dot";
-      dot.setAttribute("aria-label", "Unread messages");
-      messagesLink.appendChild(dot);
-    } else if (!summary.has_unread && existingDot) {
-      existingDot.remove();
+    let badge = messagesLink.querySelector(".nav-message-badge");
+    if (!badge) {
+      badge = document.createElement("span");
+      badge.className = "nav-message-badge";
+      badge.hidden = true;
+      messagesLink.appendChild(badge);
+    }
+    const count = summary.unread_count || 0;
+    if (count > 0) {
+      badge.hidden = false;
+      badge.textContent = count > 99 ? "99+" : String(count);
+      badge.setAttribute("aria-label", `${count} unread message${count === 1 ? "" : "s"}`);
+    } else {
+      badge.hidden = true;
+      badge.textContent = "";
+      badge.setAttribute("aria-label", "No unread messages");
     }
   } catch (error) {
     // A failed unread check should never break the navbar.
@@ -288,7 +310,7 @@ function getActiveNavFromPath() {
     return "how-it-works";
   }
 
-  if (path === "/my-profile" || path === "/my-profile.html" || path === "/profile" || path === "/profile.html") {
+  if (path === "/my-profile" || path === "/my-profile.html") {
     return "profile";
   }
 

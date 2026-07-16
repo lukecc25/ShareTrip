@@ -185,29 +185,39 @@ async function sendGuestMessage(token, body) {
   );
 }
 
-// Lists guest tokens for a ride. Each user only sees tokens they created.
-async function listGuestTokens(rideId, userId) {
+// Renews an existing guest token by pushing its expiry out another
+// TOKEN_EXPIRY_DAYS, so a previously-shared (now expired) link works again
+// without the driver having to send a brand new URL.
+async function renewGuestToken(rideId, requestingUserId, tokenId) {
   const store = await fetchStore();
   const ride = findRide(store, rideId);
   if (!ride) {
     throw new Error("Ride not found.");
   }
-  if (!isThreadParticipant(ride, userId, store)) {
+  if (!isThreadParticipant(ride, requestingUserId, store)) {
     throw new Error("You do not have access to this ride.");
   }
 
-  return (store.guest_tokens || [])
-    .filter(
-      (t) =>
-        Number(t.ride_id) === Number(rideId) && t.created_by === userId
-    )
-    .map((t) => ({
-      id: t.id,
-      guest_name: t.guest_name,
-      guest_phone: t.guest_phone,
-      token: t.token,
-      expires_at: t.expires_at,
-    }));
+  const row = (store.guest_tokens || []).find(
+    (t) =>
+      Number(t.id) === Number(tokenId) &&
+      Number(t.ride_id) === Number(rideId) &&
+      t.created_by === requestingUserId
+  );
+  if (!row) {
+    throw new Error("Guest link not found.");
+  }
+
+  const updated = throwIfError(
+    await getSupabase()
+      .from("guest_tokens")
+      .update({ expires_at: expiresAt() })
+      .eq("id", row.id)
+      .select("*")
+      .single()
+  );
+
+  return { token: updated.token, expires_at: updated.expires_at };
 }
 
-module.exports = { createGuestToken, resolveGuestToken, sendGuestMessage, listGuestTokens };
+module.exports = { createGuestToken, resolveGuestToken, sendGuestMessage, renewGuestToken };

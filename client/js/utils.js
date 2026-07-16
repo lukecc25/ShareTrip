@@ -93,7 +93,7 @@ function routeIconSvg(roundtrip) {
   </svg>`;
 }
 
-const HIDE_REQUEST_RIDES_KEY = "sharetrip-hide-request-rides";
+const OFFERS_ONLY_KEY = "sharetrip-offers-only";
 const SAME_GENDER_ONLY_FILTER_KEY = "sharetrip-same-gender-only-filter";
 
 function ableDriverClass(isAble) {
@@ -104,26 +104,26 @@ function isAbleDriver(profile) {
   return profile?.able_driver !== false && profile?.able_driver !== 0;
 }
 
-function loadHideRequestRidesPreference(profile) {
+function loadOffersOnlyPreference(profile) {
   if (!isAbleDriver(profile)) {
-    saveHideRequestRidesPreference(true);
+    saveOffersOnlyPreference(true);
     return true;
   }
-  const stored = localStorage.getItem(HIDE_REQUEST_RIDES_KEY);
+  const stored = localStorage.getItem(OFFERS_ONLY_KEY);
   if (stored === null) {
     return false;
   }
   return stored === "1";
 }
 
-function applyHideRequestRidesForDriverStatus(profile) {
+function applyOffersOnlyForDriverStatus(profile) {
   if (!isAbleDriver(profile)) {
-    saveHideRequestRidesPreference(true);
+    saveOffersOnlyPreference(true);
   }
 }
 
-function saveHideRequestRidesPreference(hide) {
-  localStorage.setItem(HIDE_REQUEST_RIDES_KEY, hide ? "1" : "0");
+function saveOffersOnlyPreference(offersOnly) {
+  localStorage.setItem(OFFERS_ONLY_KEY, offersOnly ? "1" : "0");
 }
 
 function loadSameGenderOnlyPreference() {
@@ -168,17 +168,6 @@ function stripFlashQueryParams(keys = FLASH_QUERY_KEYS) {
 
   const nextUrl = `${url.pathname}${url.search}${url.hash}`;
   window.history.replaceState({}, "", nextUrl);
-}
-
-function setQuery(params) {
-  const url = new URL(window.location.href);
-  url.search = "";
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "") {
-      url.searchParams.set(key, value);
-    }
-  });
-  window.location.href = url.toString();
 }
 
 function formatDestination(ride) {
@@ -475,9 +464,9 @@ window.ShareTripUtils = {
   routeIconSvg,
   ableDriverClass,
   isAbleDriver,
-  loadHideRequestRidesPreference,
-  saveHideRequestRidesPreference,
-  applyHideRequestRidesForDriverStatus,
+  loadOffersOnlyPreference,
+  saveOffersOnlyPreference,
+  applyOffersOnlyForDriverStatus,
   loadSameGenderOnlyPreference,
   saveSameGenderOnlyPreference,
   formatDestination,
@@ -487,5 +476,4 @@ window.ShareTripUtils = {
   syncSiteHeaderOffset,
   readQuery,
   stripFlashQueryParams,
-  setQuery,
 };

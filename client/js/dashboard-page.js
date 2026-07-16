@@ -20,16 +20,20 @@ let state = {
   rides: [],
   profile: null,
   isAuthenticated: false,
-  hideRequestRides: false,
   sameGenderOnly: false,
   offersOnly: false,
-  locationFilter: "",  // state name, "Other", or "" for all
+  requestsOnly: false,
+  showFull: false,
+  stateFilter: "",
   dateFrom: "",
   dateTo: "",
   filtersVisible: false,
   message: "",
   messageType: "success",
+  ridePage: 1,
 };
+
+const RIDES_PER_PAGE = 9;
 
 const IDAHO_ADJACENT_STATES = [
   "Idaho",
@@ -136,29 +140,6 @@ function matchesSameGenderFilter(ride) {
   return ownerGender === userGender;
 }
 
-function rideMatchesState(ride, stateName) {
-  const fields = [
-    ride.destination_state || "",
-    ride.origin || "",
-    ride.destination || "",
-  ];
-  return fields.some((f) =>
-    f.toLowerCase().includes(stateName.toLowerCase())
-  );
-}
-
-function matchesLocationFilter(ride) {
-  const q = state.locationFilter.trim();
-  if (!q) {
-    return true;
-  }
-  if (q === "Other") {
-    // Show rides that don't match any of the listed states.
-    return !IDAHO_ADJACENT_STATES.some((s) => rideMatchesState(ride, s));
-  }
-  return rideMatchesState(ride, q);
-}
-
 // Maps state names to their common abbreviations so "Provo, UT" matches "Utah".
 const STATE_ABBREVIATIONS = {
   Idaho: ["ID"],
@@ -207,30 +188,26 @@ function matchesStateFilter(ride) {
   return rideDestinationMatchesState(ride, state.stateFilter);
 }
 
-function visibleRides() {
+function isFullOfferRide(ride) {
+  // An offer ride counts as "full" (0 seats left) unless the viewer owns it or already joined it.
+  if (String(ride.ride_type || "").toLowerCase() !== "offer") {
+    return false;
+  }
+  return !(ride.seats > 0 || ride.is_owner === 1 || ride.current_user_joined === 1);
+}
+
+function ridesBeforeFullFilter() {
   let rides = state.rides;
 
   if (state.scope === "all") {
-    if (state.hideRequestRides) {
-      rides = rides.filter(isOfferRide);
-    }
     if (state.offersOnly) {
       rides = rides.filter(isOfferRide);
     }
+    if (state.requestsOnly) {
+      rides = rides.filter((r) => !isOfferRide(r));
+    }
     if (state.sameGenderOnly) {
       rides = rides.filter(matchesSameGenderFilter);
-    }
-    if (state.locationFilter.trim()) {
-      rides = rides.filter(matchesLocationFilter);
-    }
-    if (!state.showFull) {
-      rides = rides.filter((r) => {
-        // Hide offer rides that are full (seats === 0) unless showFull is on.
-        if (String(r.ride_type || "").toLowerCase() === "offer") {
-          return r.seats > 0 || r.is_owner === 1 || r.current_user_joined === 1;
-        }
-        return true;
-      });
     }
     if (state.stateFilter) {
       rides = rides.filter(matchesStateFilter);
@@ -246,20 +223,135 @@ function visibleRides() {
   return rides;
 }
 
+function visibleRides() {
+  const rides = ridesBeforeFullFilter();
+  if (state.scope === "all" && !state.showFull) {
+    return rides.filter((r) => !isFullOfferRide(r));
+  }
+  return rides;
+}
+
+function resetRidePage() {
+  state.ridePage = 1;
+}
+
+function getRidePagination(rides) {
+  const totalRides = rides.length;
+  const totalPages = Math.max(1, Math.ceil(totalRides / RIDES_PER_PAGE));
+  const page = Math.min(Math.max(1, state.ridePage), totalPages);
+  state.ridePage = page;
+  const start = (page - 1) * RIDES_PER_PAGE;
+
+  return {
+    pageRides: rides.slice(start, start + RIDES_PER_PAGE),
+    page,
+    totalPages,
+    totalRides,
+    hasNext: page < totalPages,
+    hasPrev: page > 1,
+  };
+}
+
+function renderRidePagination(pagination) {
+  if (pagination.totalRides <= RIDES_PER_PAGE) {
+    return "";
+  }
+
+  return `
+    <nav class="ride-board-pagination" aria-label="Ride board pages">
+      <button type="button" class="secondary-button ride-board-page-btn ride-board-page-btn--icon" data-action="ride-page-first" aria-label="First page"${pagination.page > 1 ? "" : " disabled"}>«</button>
+      <button type="button" class="secondary-button ride-board-page-btn ride-board-page-btn--icon" data-action="ride-page-prev" aria-label="Previous page"${pagination.hasPrev ? "" : " disabled"}>‹</button>
+      <label class="ride-board-page-status">
+        Page
+        <input
+          type="number"
+          class="ride-board-page-input"
+          min="1"
+          max="${pagination.totalPages}"
+          value="${pagination.page}"
+          aria-label="Current page"
+        >
+        of ${pagination.totalPages}
+      </label>
+      <button type="button" class="secondary-button ride-board-page-btn ride-board-page-btn--icon" data-action="ride-page-next" aria-label="Next page"${pagination.hasNext ? "" : " disabled"}>›</button>
+      <button type="button" class="secondary-button ride-board-page-btn ride-board-page-btn--icon" data-action="ride-page-last" aria-label="Last page"${pagination.page < pagination.totalPages ? "" : " disabled"}>»</button>
+    </nav>`;
+}
+
+function goToRidePage(page) {
+  const pageInput = document.querySelector(".ride-board-page-input");
+  const max = Number(pageInput?.max) || 1;
+  state.ridePage = Math.min(Math.max(1, Math.floor(Number(page) || 1)), max);
+  renderRides();
+  document.getElementById("rides-container")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function bindRidePagination() {
+  document
+    .querySelectorAll(
+      "[data-action='ride-page-first'], [data-action='ride-page-prev'], [data-action='ride-page-next'], [data-action='ride-page-last']"
+    )
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        if (button.disabled) {
+          return;
+        }
+        const pageInput = document.querySelector(".ride-board-page-input");
+        const max = Number(pageInput?.max) || 1;
+        switch (button.dataset.action) {
+          case "ride-page-first":
+            goToRidePage(1);
+            break;
+          case "ride-page-prev":
+            goToRidePage(state.ridePage - 1);
+            break;
+          case "ride-page-next":
+            goToRidePage(state.ridePage + 1);
+            break;
+          case "ride-page-last":
+            goToRidePage(max);
+            break;
+          default:
+            break;
+        }
+      });
+    });
+
+  const pageInput = document.querySelector(".ride-board-page-input");
+  if (pageInput) {
+    pageInput.addEventListener("change", () => {
+      goToRidePage(pageInput.value);
+    });
+    pageInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        pageInput.blur();
+      }
+    });
+  }
+}
+
+function hiddenFullRidesCount() {
+  if (state.scope !== "all" || state.showFull) {
+    return 0;
+  }
+  return ridesBeforeFullFilter().filter(isFullOfferRide).length;
+}
+
 function emptyRidesMessage() {
   if (state.scope !== "all" || state.rides.length === 0) {
     return "Try changing the ride view or search terms.";
   }
 
   const parts = [];
-  if (state.hideRequestRides || state.offersOnly) {
+  if (state.offersOnly) {
     parts.push("driver requests are hidden");
+  }
+  if (state.requestsOnly) {
+    parts.push("ride offers are hidden");
   }
   if (state.sameGenderOnly) {
     parts.push("only rides posted by people with the same gender as you are shown");
-  }
-  if (state.locationFilter.trim()) {
-    parts.push(`location: ${state.locationFilter.trim()}`);
   }
   if (state.dateFrom.trim() || state.dateTo.trim()) {
     const from = state.dateFrom.trim();
@@ -357,13 +449,11 @@ function renderRideCard(ride) {
     }
   }
 
-  let footer = `<a href="/ride-details.html?ride=${ride.id}" class="details-link">Details${
-    commentCount > 0 ? ` (${commentCount})` : ""
-  }</a>`;
+  let footerActions = "";
 
   if (!state.isAuthenticated) {
     if (isOffer && !isOfferPending && remainingSeats <= 0) {
-      footer += `<span class="ride-status full">Full</span>`;
+      footerActions = '<span class="ride-status full">Full</span>';
     }
   } else if (isOwner && isRequestDetailsPending) {
     footer += `
@@ -373,32 +463,33 @@ function renderRideCard(ride) {
       <span class="ride-status pending-badge">Waiting for driver details</span>`;
   } else if (isOwner) {
     const editLabel = isOfferPending ? "Complete offer" : "Edit";
-    footer += `
+    footerActions = `
       <div class="ride-owner-actions">
         <a href="/dashboard.html?edit=${ride.id}&showForm=1&scope=${state.scope}#createRideForm" class="edit-ride-link">${editLabel}</a>
         <button type="button" class="danger-button" data-action="cancel" data-ride-id="${ride.id}">Cancel Ride</button>
       </div>`;
     if (isOfferPending) {
-      footer += '<span class="ride-status pending-badge">Awaiting driver details</span>';
+      footerActions += '<span class="ride-status pending-badge">Awaiting driver details</span>';
     }
   } else if (isOffer && hasJoined) {
-    footer += `
+    footerActions = `
       <div class="ride-owner-actions">
         ${isOfferPending ? '<span class="ride-status pending-badge">Offer pending</span>' : '<span class="ride-status">Joined</span>'}
         <button type="button" class="secondary-button" data-action="leave" data-ride-id="${ride.id}">Leave Ride</button>
       </div>`;
   } else if (isOffer && !isOfferPending && remainingSeats > 0) {
-    footer += `<button type="button" class="primary-small-button" data-action="join" data-ride-id="${ride.id}" data-remaining-seats="${remainingSeats}">Join Ride</button>`;
+    footerActions = `<button type="button" class="primary-small-button" data-action="join" data-ride-id="${ride.id}" data-remaining-seats="${remainingSeats}">Join Ride</button>`;
   } else if (isOffer) {
-    footer += `<span class="ride-status full">Full</span>`;
+    footerActions = '<span class="ride-status full">Full</span>';
   } else if (!isOffer) {
-    footer += renderRequestDriverActions(ride);
+    footerActions = renderRequestDriverActions(ride);
   }
 
-  const pastBadge =
-    state.scope === "my" && ride.is_past
-      ? '<span class="ride-time-status">Past</span>'
-      : "";
+  const footer = `
+    <a href="/ride-details.html?ride=${ride.id}" class="details-link">Details${
+      commentCount > 0 ? ` (${commentCount})` : ""
+    }</a>
+    <div class="ride-card-footer-actions">${footerActions}</div>`;
 
   const flexibleBadge = ride.flexible
     ? '<span class="flexible-badge">Flexible</span>'
@@ -448,15 +539,14 @@ function renderRideCard(ride) {
       <div class="ride-card-top">
         <div class="ride-card-badges">
           <span class="ride-type ${typeClass}">${escapeHtml(typeLabel)}</span>
-          ${pastBadge}
           ${flexibleBadge}
           ${pendingDriverOfferBadge}
         </div>
         ${priceBlock}
       </div>
 
-      <div class="ride-driver-info" style="margin-bottom: 10px; font-size: 0.9rem; color: #4a5568;">
-        <span>Driver:</span> <strong style="color: #2d3748;">${escapeHtml(driverNameDisplay)}</strong>
+      <div class="ride-driver-info">
+        <span>Driver:</span> <strong>${escapeHtml(driverNameDisplay)}</strong>
       </div>
 
       <h2 class="route-title">
@@ -641,6 +731,11 @@ function updateStaticChrome() {
     filterPanel.hidden = !state.filtersVisible || !showAllFilters;
   }
 
+  const ridefilterPanelEl = document.getElementById("ride-filter-panel");
+  if (ridefilterPanelEl) {
+    ridefilterPanelEl.classList.toggle("filters-open", state.filtersVisible && showAllFilters);
+  }
+
   // Update the toggle button state.
   const filterToggleBtn = document.getElementById("filter-toggle-btn");
   if (filterToggleBtn) {
@@ -648,28 +743,32 @@ function updateStaticChrome() {
     filterToggleBtn.classList.toggle("active", state.filtersVisible);
     const label = document.getElementById("filter-toggle-label");
     if (label) {
-      const hasActiveFilters =
-        state.offersOnly ||
-        state.showFull ||
-        state.stateFilter ||
-        state.locationFilter.trim() ||
-        state.dateFrom.trim() ||
-        state.dateTo.trim();
-      label.textContent = hasActiveFilters ? "Filters (on)" : "Filters";
+      const activeFilterCount = [
+        state.offersOnly,
+        state.requestsOnly,
+        state.showFull,
+        state.sameGenderOnly,
+        state.stateFilter,
+        state.dateFrom.trim(),
+        state.dateTo.trim(),
+      ].filter(Boolean).length;
+      label.textContent = activeFilterCount > 0 ? `Filters (${activeFilterCount})` : "Filters";
     }
   }
 
-  const requestFilter = document.getElementById("hide-request-rides-filter");
-  if (requestFilter) {
-    requestFilter.hidden = !showMemberFilters;
-    if (showMemberFilters) {
-      const checkbox = requestFilter.querySelector('input[type="checkbox"]');
+  // Offers-only filter checkbox. Also doubles as "hide driver requests":
+  // non-drivers can't act on request rides, so it's forced on and locked
+  // for them, same as the old dedicated toggle used to do.
+  const offersOnlyFilter = document.getElementById("offers-only-filter");
+  if (offersOnlyFilter) {
+    if (showAllFilters) {
+      const checkbox = offersOnlyFilter.querySelector('input[type="checkbox"]');
       if (checkbox) {
         if (!u().isAbleDriver(state.profile)) {
-          state.hideRequestRides = true;
-          u().saveHideRequestRidesPreference(true);
+          state.offersOnly = true;
+          u().saveOffersOnlyPreference(true);
         }
-        checkbox.checked = state.hideRequestRides;
+        checkbox.checked = state.offersOnly;
         checkbox.disabled = !u().isAbleDriver(state.profile);
       }
     }
@@ -686,21 +785,34 @@ function updateStaticChrome() {
     }
   }
 
-  // Offers-only filter checkbox.
-  const offersOnlyFilter = document.getElementById("offers-only-filter");
-  if (offersOnlyFilter) {
+  // Requests-only filter checkbox. Mutually exclusive with "Offers only"
+  // (checking both would always show zero rides). Doesn't make sense for
+  // non-drivers, who already have "Offers only" forced on above.
+  const requestsOnlyFilter = document.getElementById("requests-only-filter");
+  if (requestsOnlyFilter) {
     if (showAllFilters) {
-      const checkbox = offersOnlyFilter.querySelector('input[type="checkbox"]');
+      const checkbox = requestsOnlyFilter.querySelector('input[type="checkbox"]');
       if (checkbox) {
-        checkbox.checked = state.offersOnly;
+        if (!u().isAbleDriver(state.profile)) {
+          state.requestsOnly = false;
+        }
+        checkbox.checked = state.requestsOnly;
+        checkbox.disabled = !u().isAbleDriver(state.profile);
       }
     }
   }
 
-  // Location filter select.
-  const locationSelect = document.getElementById("location-filter-select");
-  if (locationSelect) {
-    locationSelect.value = state.locationFilter;
+  const showFullFilter = document.getElementById("show-full-filter");
+  if (showFullFilter && showAllFilters) {
+    const checkbox = showFullFilter.querySelector('input[type="checkbox"]');
+    if (checkbox) {
+      checkbox.checked = state.showFull;
+    }
+  }
+
+  const stateSelect = document.getElementById("state-filter-select");
+  if (stateSelect && showAllFilters) {
+    stateSelect.value = state.stateFilter || "";
   }
 
   // Date filter inputs.
@@ -728,11 +840,14 @@ function renderRides() {
   }
 
   const rides = visibleRides();
+  const banner = renderFullRidesBanner();
+  const pagination = getRidePagination(rides);
 
   if (rides.length > 0) {
-    container.innerHTML = `<section class="ride-grid">${rides.map(renderRideCard).join("")}</section>`;
+    container.innerHTML = `${banner}<section class="ride-grid">${pagination.pageRides.map(renderRideCard).join("")}</section>${renderRidePagination(pagination)}`;
   } else {
     container.innerHTML = `
+      ${banner}
       <section class="empty-rides">
         <h2>No rides found</h2>
         <p>${emptyRidesMessage()}</p>
@@ -740,6 +855,37 @@ function renderRides() {
   }
 
   bindRideActions();
+  bindFullRidesBanner();
+  bindRidePagination();
+}
+
+function renderFullRidesBanner() {
+  const hiddenCount = hiddenFullRidesCount();
+  if (hiddenCount === 0) {
+    return "";
+  }
+  const rideWord = hiddenCount === 1 ? "ride is" : "rides are";
+  return `
+    <div class="full-rides-banner" id="full-rides-banner">
+      <span>${hiddenCount} full ${rideWord} hidden.</span>
+      <button type="button" id="show-full-rides-btn">Show full rides</button>
+    </div>`;
+}
+
+function bindFullRidesBanner() {
+  const btn = document.getElementById("show-full-rides-btn");
+  if (!btn) {
+    return;
+  }
+  btn.addEventListener("click", () => {
+    state.showFull = true;
+    resetRidePage();
+    const checkbox = document.querySelector("#show-full-filter input[type='checkbox']");
+    if (checkbox) {
+      checkbox.checked = true;
+    }
+    render();
+  });
 }
 
 function renderForm() {
@@ -927,31 +1073,6 @@ function bindFilterToggle() {
   });
 }
 
-function bindRequestRideFilter() {
-  const requestFilter = document.getElementById("hide-request-rides-filter");
-  if (!requestFilter) {
-    return;
-  }
-
-  const checkbox = requestFilter.querySelector('input[type="checkbox"]');
-  if (!checkbox) {
-    return;
-  }
-
-  checkbox.addEventListener("change", () => {
-    if (!u().isAbleDriver(state.profile)) {
-      state.hideRequestRides = true;
-      checkbox.checked = true;
-      u().saveHideRequestRidesPreference(true);
-      render();
-      return;
-    }
-    state.hideRequestRides = checkbox.checked;
-    u().saveHideRequestRidesPreference(state.hideRequestRides);
-    render();
-  });
-}
-
 function bindSameGenderFilter() {
   const genderFilter = document.getElementById("same-gender-only-filter");
   if (!genderFilter) {
@@ -966,6 +1087,7 @@ function bindSameGenderFilter() {
   checkbox.addEventListener("change", () => {
     state.sameGenderOnly = checkbox.checked;
     u().saveSameGenderOnlyPreference(state.sameGenderOnly);
+    resetRidePage();
     render();
   });
 }
@@ -982,7 +1104,42 @@ function bindOffersOnlyFilter() {
   }
 
   checkbox.addEventListener("change", () => {
+    if (!u().isAbleDriver(state.profile)) {
+      state.offersOnly = true;
+      checkbox.checked = true;
+      u().saveOffersOnlyPreference(true);
+      resetRidePage();
+      render();
+      return;
+    }
     state.offersOnly = checkbox.checked;
+    if (state.offersOnly) {
+      state.requestsOnly = false;
+    }
+    u().saveOffersOnlyPreference(state.offersOnly);
+    resetRidePage();
+    render();
+  });
+}
+
+function bindRequestsOnlyFilter() {
+  const requestsOnlyFilter = document.getElementById("requests-only-filter");
+  if (!requestsOnlyFilter) {
+    return;
+  }
+
+  const checkbox = requestsOnlyFilter.querySelector('input[type="checkbox"]');
+  if (!checkbox) {
+    return;
+  }
+
+  checkbox.addEventListener("change", () => {
+    state.requestsOnly = checkbox.checked;
+    if (state.requestsOnly) {
+      state.offersOnly = false;
+      u().saveOffersOnlyPreference(false);
+    }
+    resetRidePage();
     render();
   });
 }
@@ -994,7 +1151,8 @@ function bindShowFullFilter() {
   if (!checkbox) return;
   checkbox.addEventListener("change", () => {
     state.showFull = checkbox.checked;
-    renderRides();
+    resetRidePage();
+    render();
   });
 }
 
@@ -1003,18 +1161,8 @@ function bindStateFilter() {
   if (!select) return;
   select.addEventListener("change", () => {
     state.stateFilter = select.value;
-    renderRides();
-  });
-}
-
-function bindLocationFilter() {
-  const locationSelect = document.getElementById("location-filter-select");
-  if (!locationSelect) {
-    return;
-  }
-  locationSelect.addEventListener("change", () => {
-    state.locationFilter = locationSelect.value;
-    renderRides();
+    resetRidePage();
+    render();
   });
 }
 
@@ -1025,28 +1173,47 @@ function bindDateFilter() {
 
   if (fromInput) {
     fromInput.addEventListener("input", () => {
-      state.dateFrom = fromInput.value;
-      renderRides();
-    });
+    state.dateFrom = fromInput.value;
+    resetRidePage();
+    render();
+  });
   }
   if (toInput) {
     toInput.addEventListener("input", () => {
-      state.dateTo = toInput.value;
-      renderRides();
-    });
+    state.dateTo = toInput.value;
+    resetRidePage();
+    render();
+  });
   }
   if (clearBtn) {
     clearBtn.addEventListener("click", () => {
       state.dateFrom = "";
       state.dateTo = "";
-      state.locationFilter = "";
       state.offersOnly = false;
+      state.requestsOnly = false;
+      state.stateFilter = "";
+      state.showFull = false;
+      state.sameGenderOnly = false;
       if (fromInput) fromInput.value = "";
       if (toInput) toInput.value = "";
-      const locSelect = document.getElementById("location-filter-select");
-      if (locSelect) locSelect.value = "";
+      const stateSelect = document.getElementById("state-filter-select");
+      if (stateSelect) stateSelect.value = "";
       const offersCheckbox = document.querySelector("#offers-only-filter input");
       if (offersCheckbox) offersCheckbox.checked = false;
+      const requestsCheckbox = document.querySelector("#requests-only-filter input");
+      if (requestsCheckbox) requestsCheckbox.checked = false;
+      const showFullCheckbox = document.querySelector("#show-full-filter input");
+      if (showFullCheckbox) showFullCheckbox.checked = false;
+      const genderCheckbox = document.querySelector("#same-gender-only-filter input");
+      if (genderCheckbox) genderCheckbox.checked = false;
+      if (!u().isAbleDriver(state.profile)) {
+        state.offersOnly = true;
+        u().saveOffersOnlyPreference(true);
+        if (offersCheckbox) offersCheckbox.checked = true;
+      }
+      u().saveOffersOnlyPreference(state.offersOnly);
+      u().saveSameGenderOnlyPreference(false);
+      resetRidePage();
       render();
     });
   }
@@ -1160,12 +1327,11 @@ async function initDashboardPage() {
   parseInitialState();
   bindSearchForm();
   bindFilterToggle();
-  bindRequestRideFilter();
   bindSameGenderFilter();
   bindOffersOnlyFilter();
+  bindRequestsOnlyFilter();
   bindShowFullFilter();
   bindStateFilter();
-  bindLocationFilter();
   bindDateFilter();
 
   const session = await ShareTripAuth.getSession();
@@ -1187,7 +1353,7 @@ async function initDashboardPage() {
     }
 
     state.profile = profile;
-    state.hideRequestRides = u().loadHideRequestRidesPreference(profile);
+    state.offersOnly = u().loadOffersOnlyPreference(profile);
     state.sameGenderOnly = u().loadSameGenderOnlyPreference();
   }
 

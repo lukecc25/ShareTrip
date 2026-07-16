@@ -1,5 +1,4 @@
-.auth-page,
-.profile-page {
+.auth-page {
     min-height: calc(100vh - 80px);
     display: grid;
     grid-template-columns: minmax(0, 1fr) 420px;
@@ -27,8 +26,7 @@ body.auth-body::before {
         url("/images/derwiki-road-1958388_1920.webp") center / cover fixed no-repeat;
 }
 
-.auth-page,
-.profile-page {
+.auth-page {
     position: relative;
     z-index: 1;
 }
@@ -58,8 +56,7 @@ body.auth-body::before {
     line-height: 1.55;
 }
 
-.auth-panel,
-.profile-panel {
+.auth-panel {
     background: #fff;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
@@ -67,8 +64,7 @@ body.auth-body::before {
     padding: 28px;
 }
 
-.auth-form,
-.profile-form {
+.auth-form {
     display: grid;
 }
 
@@ -78,8 +74,7 @@ body.auth-body::before {
     gap: 14px;
 }
 
-.auth-form label,
-.profile-form label {
+.auth-form label {
     color: #334155;
     font-size: 14px;
     font-weight: 700;
@@ -88,9 +83,7 @@ body.auth-body::before {
 }
 
 .auth-form input,
-.auth-form select,
-.profile-form input,
-.profile-form select {
+.auth-form select {
     width: 100%;
     padding: 12px;
     margin-bottom: 16px;
@@ -99,8 +92,7 @@ body.auth-body::before {
     font: inherit;
 }
 
-.auth-form button,
-.profile-form button {
+.auth-form button {
     width: 100%;
     padding: 13px;
     background: #2563eb;
@@ -112,8 +104,7 @@ body.auth-body::before {
     font-weight: 700;
 }
 
-.auth-form button:hover,
-.profile-form button:hover {
+.auth-form button:hover {
     background: #1d4ed8;
 }
 
@@ -149,8 +140,7 @@ body.auth-body::before {
 }
 
 @media (max-width: 820px) {
-    .auth-page,
-    .profile-page {
+    .auth-page {
         grid-template-columns: 1fr;
         gap: 28px;
     }
