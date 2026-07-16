@@ -45,6 +45,9 @@ function formatRatingValue(rating) {
 }
 
 function rideTypeLabel(type, ride = null) {
+  if (isRequestDriverDetailsPending(ride)) {
+    return "Details Pending";
+  }
   if (isOfferPendingRide(ride)) {
     return "Offer Pending";
   }
@@ -62,6 +65,14 @@ function isOfferPendingRide(ride) {
   return (
     String(ride?.ride_type || "").toLowerCase() === "offer" &&
     (ride?.offer_pending === 1 || ride?.offer_pending === true)
+  );
+}
+
+function isRequestDriverDetailsPending(ride) {
+  return (
+    String(ride?.ride_type || "").toLowerCase() === "request" &&
+    Boolean(ride?.assigned_driver_id) &&
+    (ride?.offer_pending === 1 || ride?.offer_pending === true || ride?.request_driver_details_pending === 1)
   );
 }
 
@@ -448,6 +459,7 @@ window.ShareTripUtils = {
   formatRatingValue,
   rideTypeLabel,
   isOfferPendingRide,
+  isRequestDriverDetailsPending,
   fullName,
   routeIconSvg,
   ableDriverClass,
