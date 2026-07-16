@@ -168,6 +168,20 @@ const DARK_THEME_CSS = `
     border-bottom: 3px solid #2563eb;
 }
 
+[data-theme="dark"] .ride-card .secondary-button,
+[data-theme="dark"] .detail-actions .secondary-button {
+    background: #bae6fd;
+    border: 1px solid #7dd3fc;
+    color: #0c4a6e;
+}
+
+[data-theme="dark"] .ride-card .secondary-button:hover,
+[data-theme="dark"] .detail-actions .secondary-button:hover {
+    background: #e0f2fe;
+    border-color: #38bdf8;
+    color: #075985;
+}
+
 [data-theme="dark"] .ride-type.offer {
     background: rgba(34, 197, 94, 0.2);
     color: #86efac;
