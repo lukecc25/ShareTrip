@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS rides (
     ride_cost DOUBLE PRECISION NOT NULL DEFAULT 0,
     gender_preference TEXT NOT NULL DEFAULT 'No preference'
         CHECK (gender_preference IN ('Same gender only', 'No preference')),
+    departure_time TEXT,
+    ride_notes TEXT,
     assigned_driver_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

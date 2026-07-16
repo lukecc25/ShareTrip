@@ -878,7 +878,7 @@ function bindProfileEvents() {
           await loadProfileNotifications();
           showMessage(
             accept
-              ? "Driver accepted. The offer is pending until they save trip details."
+              ? "Driver accepted. Waiting for them to complete trip details."
               : "Driver offer declined."
           );
           render();

@@ -6,6 +6,7 @@ let detail = null;
 let message = "";
 let messageType = "success";
 let isAuthenticated = false;
+let showDriverDetailsForm = false;
 
 function genderClass(gender) {
   return String(gender || "").toLowerCase() === "female" ? "female" : "male";
@@ -43,15 +44,26 @@ function renderRatingForm(rideId, person, role) {
 }
 
 function renderRequestDriverActions(ride, currentUserId) {
+  const isDriverDetailsPending = u().isRequestDriverDetailsPending(ride);
   if (ride.is_owner) {
-    return "";
+    return isDriverDetailsPending
+      ? '<span class="ride-status pending-badge">Waiting for driver details</span>'
+      : "";
   }
   if (ride.has_assigned_driver) {
     // If the current user is the assigned driver, show resign button.
     if (ride.assigned_driver_id === currentUserId) {
+      const completeButton = isDriverDetailsPending
+        ? `<button type="button" class="primary-small-button" data-action="show-driver-details" data-ride-id="${ride.id}">Complete trip details</button>`
+        : "";
       return `
-        <span class="ride-status">Accepted as driver</span>
-        <button type="button" class="danger-button" data-action="resign-driver" data-ride-id="${ride.id}">Resign as driver</button>`;
+        <div class="request-driver-action-row">
+          <span class="ride-status">Accepted as driver</span>
+          <div class="request-driver-action-buttons">
+            ${completeButton}
+            <button type="button" class="danger-button" data-action="resign-driver" data-ride-id="${ride.id}">Resign as driver</button>
+          </div>
+        </div>`;
     }
     return '<span class="ride-status">Driver assigned</span>';
   }
@@ -93,6 +105,57 @@ function renderDriverOffersPanel(detail) {
       </div>
       <div class="driver-offers-panel">${cards}</div>
     </section>`;
+}
+
+function renderDriverDetailsModal(ride) {
+  const { escapeHtml } = u();
+  const isAssignedDriver =
+    ride.assigned_driver_id && ride.assigned_driver_id === ride.current_user_id;
+  if (!isAssignedDriver || !u().isRequestDriverDetailsPending(ride) || !showDriverDetailsForm) {
+    return "";
+  }
+
+  return `
+    <div class="driver-details-modal-backdrop" data-action="hide-driver-details" role="presentation">
+      <section class="ride-form-panel driver-details-modal" id="complete-driver-details" role="dialog" aria-modal="true" aria-labelledby="driver-details-title">
+        <div class="form-panel-header">
+          <div>
+            <h2 id="driver-details-title">Complete Trip Details</h2>
+            <p>Add the available seats, shared cost, and pickup details before this ride is ready for passengers.</p>
+          </div>
+          <button type="button" class="cancel-form-link driver-details-cancel-link" data-action="hide-driver-details">Cancel</button>
+        </div>
+        <form class="ride-form driver-details-form" id="driverDetailsForm">
+          <div class="form-row">
+            <div>
+              <label for="driver-detail-seats">Available passenger seats</label>
+              <input id="driver-detail-seats" name="seats" type="number" min="0" step="1" value="${escapeHtml(ride.seats ?? 0)}" required>
+            </div>
+            <div>
+              <label for="driver-detail-cost">Total ride cost</label>
+              <div class="input-with-prefix">
+                <span class="input-prefix">$</span>
+                <input id="driver-detail-cost" name="rideCost" type="number" min="0" step="0.01" value="${escapeHtml(ride.ride_cost ?? 0)}" required>
+              </div>
+              <p class="field-hint">Enter the total shared ride cost, not the per-person amount.</p>
+            </div>
+          </div>
+          <div class="form-row">
+            <div>
+              <label for="driver-detail-time">Departure time</label>
+              <input id="driver-detail-time" name="departureTime" type="text" maxlength="50" value="${escapeHtml(ride.departure_time || "")}" placeholder="e.g. 8:30 AM">
+            </div>
+          </div>
+          <div class="form-row single-column">
+            <div>
+              <label for="driver-detail-notes">Notes</label>
+              <textarea id="driver-detail-notes" name="rideNotes" maxlength="500" rows="3" placeholder="Pickup spot, luggage space, payment notes">${escapeHtml(ride.ride_notes || "")}</textarea>
+            </div>
+          </div>
+          <button type="submit">Save Trip Details</button>
+        </form>
+      </section>
+    </div>`;
 }
 
 function profilePageUrl(userId) {
@@ -313,19 +376,22 @@ function render() {
   if (!root || !detail) {
     return;
   }
+  document.body.classList.toggle("modal-open", showDriverDetailsForm);
 
   const { escapeHtml, formatDateValue, rideTypeLabel, fullName, routeIconSvg } = u();
 
   const ride = detail.ride;
   const currentUserId = ride.current_user_id;
   const isOfferPending = u().isOfferPendingRide(ride);
+  const isRequestDetailsPending = u().isRequestDriverDetailsPending(ride);
   const typeLabel = rideTypeLabel(ride.ride_type, ride);
-  const typeClass = isOfferPending
+  const typeClass = isOfferPending || isRequestDetailsPending
     ? "offer-pending"
     : typeLabel === "Request"
       ? "request"
       : "offer";
   const isOffer = String(ride.ride_type || "").toLowerCase() === "offer";
+  const isCompletedRequest = !isOffer && ride.has_assigned_driver && !isRequestDetailsPending;
   const isOwner = ride.is_owner === 1;
   const hasJoined = ride.current_user_joined === 1;
   const remainingSeats = ride.seats;
@@ -333,10 +399,10 @@ function render() {
   const splitCost = ride.split_cost;
   const passengerCount = ride.passenger_count ?? detail.people.length;
 
-  const rawFirstName = ride.driver_fname || ride.owner_fname || ride.fname || "";
-  const rawLastName = ride.driver_lname || ride.owner_lname || ride.lname || "";
+  const rawFirstName = ride.driver_fname || ride.assigned_driver_fname || ride.owner_fname || ride.fname || "";
+  const rawLastName = ride.driver_lname || ride.assigned_driver_lname || ride.owner_lname || ride.lname || "";
   const resolvedFullName = `${rawFirstName} ${rawLastName}`.trim();
-  const driverName = isOwner ? "You" : (resolvedFullName || ride.driver_name || ride.owner_name || "Unknown Driver");
+  const driverName = isOffer && isOwner ? "You" : (resolvedFullName || ride.driver_name || ride.owner_name || "Unknown Driver");
 
   let actions = "";
   if (isOffer) {
@@ -376,6 +442,10 @@ function render() {
     !isOffer && ride.pending_driver_offer_count > 0 && !ride.has_assigned_driver
       ? `<div><span>Status</span><strong>Driver offer pending</strong></div>`
       : "";
+  const requestDetailsPendingHtml =
+    isRequestDetailsPending
+      ? `<div><span>Status</span><strong>Waiting for driver details</strong></div>`
+      : "";
 
   const commentsHtml =
     detail.comments.length > 0
@@ -406,13 +476,17 @@ function render() {
           ${ride.departure_time ? `<div><span>Departure time</span><strong>${escapeHtml(ride.departure_time)}</strong></div>` : ""}
           <div><span>Trip</span><strong>${ride.roundtrip ? "Round trip" : "One way"}</strong></div>
           ${pendingDriverOfferHtml}
+          ${requestDetailsPendingHtml}
           ${
             isOffer && !isOfferPending
               ? `<div><span>Passenger Seats</span><strong>${remainingSeats}/${totalSeats}</strong></div>
                  <div><span>Split cost</span><strong>$${Number(splitCost).toFixed(2)} each</strong></div>`
               : isOfferPending
                 ? `<div><span>Status</span><strong>Driver completing offer details</strong></div>`
-                : ""
+                : isCompletedRequest
+                  ? `<div><span>Passenger Seats</span><strong>${remainingSeats}/${totalSeats}</strong></div>
+                     <div><span>Split cost</span><strong>$${Number(splitCost).toFixed(2)} each</strong></div>`
+                  : ""
           }
           <div><span>Preference</span><strong>${escapeHtml(ride.gender_preference)}</strong></div>
           ${assignedDriverHtml}
@@ -436,6 +510,7 @@ function render() {
             : '<p class="no-comments">Sign in with an existing account to comment or join this ride.</p>'
         }
       </section>
+      ${renderDriverDetailsModal(ride)}
     </main>
   `;
 
@@ -445,7 +520,7 @@ function render() {
 
 function bindEvents(rideId) {
   document.querySelectorAll("[data-action]").forEach((button) => {
-    button.addEventListener("click", async () => {
+    button.addEventListener("click", async (event) => {
       const action = button.dataset.action;
       const offerId = button.dataset.offerId;
       const targetRideId = button.dataset.rideId || rideId;
@@ -455,6 +530,22 @@ function bindEvents(rideId) {
         if (action === "become-driver") {
           await ShareTripApi.apiFetch(`/api/rides/${targetRideId}/become-driver`, { method: "POST" });
           window.location.href = `/ride-details.html?ride=${targetRideId}&driver_pending=1`;
+          return;
+        }
+
+        if (action === "show-driver-details") {
+          showDriverDetailsForm = true;
+          render();
+          document.getElementById("driver-detail-seats")?.focus();
+          return;
+        }
+
+        if (action === "hide-driver-details") {
+          if (button.classList.contains("driver-details-modal-backdrop") && event.target !== button) {
+            return;
+          }
+          showDriverDetailsForm = false;
+          render();
           return;
         }
 
@@ -559,6 +650,27 @@ function bindEvents(rideId) {
         render();
       }
     });
+  });
+
+  document.getElementById("driverDetailsForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    try {
+      await ShareTripApi.apiFetch(`/api/rides/${rideId}/driver-details`, {
+        method: "PUT",
+        body: JSON.stringify({
+          seats: formData.get("seats"),
+          rideCost: formData.get("rideCost"),
+          departureTime: formData.get("departureTime"),
+          rideNotes: formData.get("rideNotes"),
+        }),
+      });
+      window.location.href = `/ride-details.html?ride=${rideId}&driver_details_saved=1#people`;
+    } catch (error) {
+      message = error.message || "Unable to save trip details.";
+      messageType = "error";
+      updatePageMessage();
+    }
   });
 
   document.getElementById("commentForm")?.addEventListener("submit", async (event) => {
@@ -685,7 +797,11 @@ async function initRideDetailsPage() {
     messageType = "success";
   }
   if (query.has("offer_responded")) {
-    message = "Driver accepted. The offer stays pending until the driver saves trip details.";
+    message = "Driver accepted. Waiting for the driver to complete trip details.";
+    messageType = "success";
+  }
+  if (query.has("driver_details_saved")) {
+    message = "Saved.";
     messageType = "success";
   }
   if (query.has("resigned")) {
@@ -722,4 +838,11 @@ document.addEventListener("DOMContentLoaded", () => {
     console.error(error);
     showDetailError(error.message || "Unexpected error.");
   });
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && showDriverDetailsForm) {
+    showDriverDetailsForm = false;
+    render();
+  }
 });
