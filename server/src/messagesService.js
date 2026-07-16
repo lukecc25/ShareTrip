@@ -70,6 +70,14 @@ async function listThreadsForUser(userId) {
     }
 
     const driver = findAccount(store, driverId);
+    let userRole;
+    if (ride.owner_id === userId) {
+      userRole = ride.ride_type === "offer" ? "driver" : "owner";
+    } else if (driverId === userId) {
+      userRole = "driver";
+    } else {
+      userRole = "passenger";
+    }
     const rideMessages = store.messages
       .filter((m) => Number(m.ride_id) === Number(ride.id))
       .sort((a, b) => a.created_at.localeCompare(b.created_at));
@@ -84,6 +92,7 @@ async function listThreadsForUser(userId) {
     threads.push({
       ride_id: ride.id,
       ride_type: ride.ride_type,
+      user_role: userRole,
       origin: ride.origin,
       destination: ride.destination,
       destination_state: ride.destination_state,

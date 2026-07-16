@@ -61,6 +61,29 @@
     font-size: 16px;
 }
 
+.thread-name-role {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    min-width: 0;
+}
+
+.thread-name-role strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.trip-role-badge {
+    background: #eff6ff;
+    border-radius: 999px;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 10px;
+    white-space: nowrap;
+}
+
 .thread-date {
     color: #64748b;
     font-size: 12px;
