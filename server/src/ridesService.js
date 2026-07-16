@@ -51,6 +51,113 @@ function nameMatches(account, search) {
   );
 }
 
+const STATE_ABBREVIATIONS = {
+  Idaho: ["ID"],
+  Montana: ["MT"],
+  Wyoming: ["WY"],
+  Utah: ["UT"],
+  Nevada: ["NV"],
+  Oregon: ["OR"],
+  Washington: ["WA"],
+};
+
+function getStatesMatchedByQuery(query) {
+  const q = String(query || "").trim().toLowerCase();
+  if (!q) {
+    return [];
+  }
+
+  const matched = [];
+  for (const stateName of Object.keys(STATE_ABBREVIATIONS)) {
+    const stateLower = stateName.toLowerCase();
+    const abbrevs = STATE_ABBREVIATIONS[stateName].map((abbrev) => abbrev.toLowerCase());
+
+    if (
+      stateLower === q ||
+      (q.length >= 2 && stateLower.startsWith(q)) ||
+      (q.length >= 4 && stateLower.includes(q))
+    ) {
+      matched.push(stateName);
+      continue;
+    }
+
+    const abbrevMatched = abbrevs.some(
+      (abbrev) =>
+        abbrev === q ||
+        (q.length >= 2 && abbrev.startsWith(q)) ||
+        (q.length >= 2 && q.startsWith(abbrev))
+    );
+    if (abbrevMatched) {
+      matched.push(stateName);
+    }
+  }
+
+  return matched;
+}
+
+function rideDestinationMatchesState(ride, stateName) {
+  const abbrevs = STATE_ABBREVIATIONS[stateName] || [];
+  const fields = [
+    String(ride.destination_state || "").trim(),
+    String(ride.destination || "").trim(),
+  ].map((field) => field.toLowerCase());
+
+  const stateNameLower = stateName.toLowerCase();
+  const abbrevPatterns = abbrevs.map((abbrev) => abbrev.toLowerCase());
+
+  return fields.some((field) => {
+    if (!field) {
+      return false;
+    }
+    if (field === stateNameLower || field.includes(stateNameLower)) {
+      return true;
+    }
+    return abbrevPatterns.some(
+      (abbrev) =>
+        field === abbrev ||
+        field.endsWith(`, ${abbrev}`) ||
+        field.endsWith(` ${abbrev}`) ||
+        field.includes(`, ${abbrev} `) ||
+        field.includes(`(${abbrev})`) ||
+        field.endsWith(abbrev)
+    );
+  });
+}
+
+function rideMatchesSearch(ride, query, store) {
+  const q = String(query || "").trim();
+  if (!q) {
+    return true;
+  }
+
+  const lower = q.toLowerCase();
+  if (
+    ride.origin.toLowerCase().includes(lower) ||
+    ride.destination.toLowerCase().includes(lower) ||
+    String(ride.destination_state || "").toLowerCase().includes(lower)
+  ) {
+    return true;
+  }
+
+  const matchedStates = getStatesMatchedByQuery(q);
+  if (matchedStates.some((stateName) => rideDestinationMatchesState(ride, stateName))) {
+    return true;
+  }
+
+  const owner = findAccount(store, ride.owner_id);
+  if (owner && nameMatches(owner, q)) {
+    return true;
+  }
+
+  return store.passengers.some((p) => {
+    if (Number(p.ride_id) !== Number(ride.id)) {
+      return false;
+    }
+    const passenger = findAccount(store, p.user_id);
+    return passenger && nameMatches(passenger, q);
+  });
+}
+
 // Builds a plain vehicle-info object from an account row, or null if the
 // driver hasn't filled in any vehicle details yet.
 function buildVehicleInfo(account) {
@@ -75,10 +182,6 @@ function buildVehicleInfo(account) {
 
 async function getProfile(userId) {
   return authService.getAccountById(userId);
-}
-
-async function upsertProfile(userId, data) {
-  return authService.updateAccount(userId, data);
 }
 
 function enrichRide(row, currentUserId, store) {
@@ -149,70 +252,51 @@ function enrichRide(row, currentUserId, store) {
   };
 }
 
+function userParticipatesInRide(store, ride, userId) {
+  if (ride.owner_id === userId) {
+    return true;
+  }
+
+  if (
+    store.passengers.some(
+      (p) => Number(p.ride_id) === Number(ride.id) && p.user_id === userId
+    )
+  ) {
+    return true;
+  }
+
+  if (ride.assigned_driver_id === userId) {
+    return true;
+  }
+
+  return store.driver_offers.some(
+    (o) =>
+      Number(o.ride_id) === Number(ride.id) &&
+      o.driver_user_id === userId &&
+      o.status === "pending"
+  );
+}
+
 async function listRides({ scope = "all", search = "" }, currentUserId) {
   const store = await fetchStore();
   let rows = [...store.rides];
   const q = search.trim();
+  const t = today();
 
   if (scope === "my" && currentUserId) {
-    rows = rows.filter(
-      (r) =>
-        r.owner_id === currentUserId ||
-        r.assigned_driver_id === currentUserId ||
-        store.passengers.some(
-          (p) =>
-            Number(p.ride_id) === Number(r.id) && p.user_id === currentUserId
-        )
-    );
-  } else {
-    rows = rows.filter((r) => r.start_date >= today());
+    rows = rows.filter((r) => userParticipatesInRide(store, r, currentUserId));
   }
+
+  rows = rows.filter((r) => r.start_date >= t);
 
   if (q) {
-    rows = rows.filter((r) => {
-      if (
-        r.origin.toLowerCase().includes(q.toLowerCase()) ||
-        r.destination.toLowerCase().includes(q.toLowerCase()) ||
-        String(r.destination_state || "").toLowerCase().includes(q.toLowerCase())
-      ) {
-        return true;
-      }
-      const owner = findAccount(store, r.owner_id);
-      if (owner && nameMatches(owner, q)) {
-        return true;
-      }
-      return store.passengers.some((p) => {
-        if (Number(p.ride_id) !== Number(r.id)) {
-          return false;
-        }
-        const passenger = findAccount(store, p.user_id);
-        return passenger && nameMatches(passenger, q);
-      });
-    });
+    rows = rows.filter((r) => rideMatchesSearch(r, q, store));
   }
 
-  const t = today();
-  if (scope === "my") {
-    rows.sort((a, b) => {
-      const aPast = a.start_date < t;
-      const bPast = b.start_date < t;
-      if (aPast !== bPast) {
-        return aPast ? 1 : -1;
-      }
-      if (!aPast && !bPast) {
-        return a.start_date.localeCompare(b.start_date);
-      }
-      if (aPast && bPast) {
-        return b.start_date.localeCompare(a.start_date);
-      }
-      return Number(b.id) - Number(a.id);
-    });
-  } else {
-    rows.sort((a, b) => {
-      const byDate = a.start_date.localeCompare(b.start_date);
-      return byDate !== 0 ? byDate : Number(b.id) - Number(a.id);
-    });
-  }
+  rows.sort((a, b) => {
+    const byDate = a.start_date.localeCompare(b.start_date);
+    return byDate !== 0 ? byDate : Number(b.id) - Number(a.id);
+  });
 
   return rows.map((row) => enrichRide(row, currentUserId, store));
 }
@@ -221,6 +305,9 @@ async function getRideById(rideId, currentUserId) {
   const store = await fetchStore();
   const row = findRide(store, rideId);
   if (!row) {
+    return null;
+  }
+  if (row.start_date < today()) {
     return null;
   }
   return enrichRide(row, currentUserId, store);
@@ -847,12 +934,21 @@ async function getUserProfileOverview(userId) {
 }
 
 async function getRideDetail(rideId, currentUserId) {
-  const ride = await getRideById(rideId, currentUserId);
-  if (!ride) {
+  const store = await fetchStore();
+  const row = findRide(store, rideId);
+  if (!row) {
     return null;
   }
 
-  const store = await fetchStore();
+  const isPast = row.start_date < today();
+  if (isPast) {
+    if (!currentUserId || getUserRoleOnRide(store, row, currentUserId) === null) {
+      return null;
+    }
+  }
+
+  const ride = enrichRide(row, currentUserId, store);
+
   const passengers = store.passengers
     .filter((p) => Number(p.ride_id) === Number(rideId))
     .map((p) => {
@@ -871,6 +967,8 @@ async function getRideDetail(rideId, currentUserId) {
 
   const comments = listCommentsFromStore(store, rideId, currentUserId);
   const rideCompleted = ride.end_date < today();
+  const driverId =
+    ride.ride_type === "offer" ? ride.owner_id : ride.assigned_driver_id;
 
   const people = [];
   for (const person of passengers) {
@@ -891,18 +989,23 @@ async function getRideDetail(rideId, currentUserId) {
     });
   }
 
-  const detailDriverId = ride.ride_type === "offer" ? ride.owner_id : ride.assigned_driver_id;
-  const driverStats = detailDriverId
-    ? getUserRatingStatsFromStore(store, detailDriverId)
-    : { driven_count: 0, passenger_count: 0, rating_average: null, rating_count: 0 };
-  const driverRating = currentUserId
-    ? store.ratings.find(
-        (r) =>
-          Number(r.ride_id) === Number(rideId) &&
-          r.rated_user_id === detailDriverId &&
-          r.rater_user_id === currentUserId
-      )
-    : null;
+  const driverStats = driverId
+    ? getUserRatingStatsFromStore(store, driverId)
+    : {
+        driven_count: 0,
+        passenger_count: 0,
+        rating_average: null,
+        rating_count: 0,
+      };
+  const driverRating =
+    currentUserId && driverId
+      ? store.ratings.find(
+          (r) =>
+            Number(r.ride_id) === Number(rideId) &&
+            r.rated_user_id === driverId &&
+            r.rater_user_id === currentUserId
+        )
+      : null;
 
   let pending_driver_offers = [];
   let assigned_driver = null;
@@ -940,9 +1043,32 @@ async function getRideDetail(rideId, currentUserId) {
 
   // The actual driver depends on ride type: for an offer, the owner drives.
   // For a request, it's whoever has been accepted via assigned_driver_id.
-  const driverId = detailDriverId;
   const driverAccount = driverId ? findAccount(store, driverId) : null;
   const vehicleInfo = buildVehicleInfo(driverAccount);
+  const driver =
+    driverAccount && currentUserId
+      ? {
+          id: driverAccount.id,
+          user_id: driverAccount.id,
+          fname: driverAccount.fname,
+          lname: driverAccount.lname,
+          gender: driverAccount.gender,
+          ...driverStats,
+          current_user_rating: driverRating?.rating ?? null,
+          current_user_rating_comment: driverRating?.comment ?? "",
+        }
+      : driverAccount
+        ? {
+            id: driverAccount.id,
+            user_id: driverAccount.id,
+            fname: driverAccount.fname,
+            lname: driverAccount.lname,
+            gender: driverAccount.gender,
+            ...driverStats,
+            current_user_rating: null,
+            current_user_rating_comment: "",
+          }
+        : null;
 
   const isRideParticipant = Boolean(
     currentUserId &&
@@ -989,6 +1115,7 @@ async function getRideDetail(rideId, currentUserId) {
     comments,
     pending_driver_offers,
     assigned_driver,
+    driver,
     driver_vehicle: { status: driverVehicleStatus, info: driverVehicle },
   };
 }
@@ -1105,24 +1232,6 @@ async function deleteNotificationsForOffer(offerId) {
   if (result.error) {
     throw new Error(result.error.message);
   }
-}
-
-async function listPendingDriverOffers(rideId) {
-  const store = await fetchStore();
-  return store.driver_offers
-    .filter(
-      (o) => Number(o.ride_id) === Number(rideId) && o.status === "pending"
-    )
-    .sort((a, b) => a.created_at.localeCompare(b.created_at))
-    .map((o) => {
-      const account = findAccount(store, o.driver_user_id);
-      return {
-        ...o,
-        fname: account?.fname,
-        lname: account?.lname,
-        gender: account?.gender,
-      };
-    });
 }
 
 function enrichNotification(row, store, userId) {
@@ -1397,7 +1506,6 @@ async function respondToDriverOffer(rideId, offerId, ownerId, accept) {
 
 module.exports = {
   getProfile,
-  upsertProfile,
   getUserProfileOverview,
   listRides,
   getRideById,
@@ -1412,7 +1520,6 @@ module.exports = {
   updateComment,
   deleteRating,
   ratePerson,
-  listPendingDriverOffers,
   listNotifications,
   markNotificationsRead,
   deleteNotifications,

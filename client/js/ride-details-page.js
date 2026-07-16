@@ -171,7 +171,7 @@ function renderViewProfileLink(userId) {
 function renderPersonCard(person, ride, role) {
   const { escapeHtml, formatRatingValue, fullName } = u();
   const isDriver = role === "driver";
-  const userId = person.user_id || person.id || (isDriver ? ride.owner_id : null);
+  const userId = person.user_id || person.id || null;
   const canRate = isAuthenticated && ride.ride_completed && userId !== ride.current_user_id;
 
   const drivenCount = isDriver
@@ -294,6 +294,39 @@ function updatePageMessage() {
       messageType = "success";
     },
   });
+}
+
+function renderDriverSection(detail, ride) {
+  if (!detail.driver) {
+    return "";
+  }
+
+  return `
+    <section class="detail-card detail-section" id="driver">
+      <div class="section-heading">
+        <h2>Driver</h2>
+      </div>
+      <div class="people-list">
+        ${renderPersonCard(detail.driver, ride, "driver")}
+      </div>
+    </section>`;
+}
+
+function renderPassengersSection(detail, ride, passengerCount) {
+  return `
+    <section class="detail-card detail-section" id="people">
+      <div class="section-heading">
+        <h2>Passengers</h2>
+        <span>${passengerCount} passenger${passengerCount === 1 ? "" : "s"}</span>
+      </div>
+      <div class="people-list">
+        ${
+          detail.people.length
+            ? detail.people.map((person) => renderPersonCard(person, ride, "passenger")).join("")
+            : '<p class="no-comments">No passengers yet.</p>'
+        }
+      </div>
+    </section>`;
 }
 
 function renderVehicleSection(detail) {
@@ -462,23 +495,8 @@ function render() {
       </article>
       ${renderVehicleSection(detail)}
       ${renderDriverOffersPanel(detail)}
-      ${
-        isOffer || ride.has_assigned_driver
-          ? `<section class="detail-card detail-section" id="people">
-              <div class="section-heading">
-                <h2>Passengers</h2>
-                <span>${passengerCount} passenger${passengerCount === 1 ? "" : "s"}</span>
-              </div>
-              <div class="people-list">
-                ${
-                  detail.people.length
-                    ? detail.people.map((person) => renderPersonCard(person, ride, "passenger")).join("")
-                    : '<p class="no-comments">No passengers yet.</p>'
-                }
-              </div>
-            </section>`
-          : ""
-      }
+      ${renderDriverSection(detail, ride)}
+      ${isOffer || ride.has_assigned_driver ? renderPassengersSection(detail, ride, passengerCount) : ""}
       <section class="detail-card detail-section ride-comments" id="comments">
         <div class="section-heading"><h2>Comments</h2><span>${detail.comments.length}</span></div>
         <div class="comment-list" id="comment-list">${commentsHtml}</div>

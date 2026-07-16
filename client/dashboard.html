@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="/js/theme.js"></script>
   <title>Ride Board | ShareTrip</title>
   <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -88,26 +89,25 @@
               <input type="date" id="date-to-input" class="filter-input date-input">
             </div>
 
-            <div class="filter-group filter-group-checkboxes">
+              <div class="filter-group filter-group-checkboxes">
               <label class="filter-group-label">Show</label>
               <div class="filter-checkboxes">
-                <label class="ride-filter-toggle" id="offers-only-filter">
+              <label class="ride-filter-toggle" id="offers-only-filter">
                   <input type="checkbox"> Offers only
+                </label>
+              <label class="ride-filter-toggle" id="requests-only-filter">
+                  <input type="checkbox"> Requests only
                 </label>
                 <label class="ride-filter-toggle" id="show-full-filter">
                   <input type="checkbox"> Show full rides
-                </label>
-                <label class="ride-filter-toggle" id="hide-request-rides-filter" hidden>
-                  <input type="checkbox"> Hide driver requests
                 </label>
                 <label class="ride-filter-toggle" id="same-gender-only-filter" hidden>
                   <input type="checkbox"> Same gender only
                 </label>
               </div>
+              <button type="button" id="clear-date-filter" class="clear-filters-btn">Clear all filters</button>
             </div>
           </div>
-
-          <button type="button" id="clear-date-filter" class="clear-filters-btn">Clear all filters</button>
         </div>
       </div>
     </section>

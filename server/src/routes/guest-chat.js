@@ -4,35 +4,18 @@ const guestChatService = require("../guestChatService");
 
 const router = express.Router();
 
-// Driver creates a guest token for a non-account passenger.
-// POST /api/guest-chat/rides/:id/tokens
-router.post("/rides/:id/tokens", requireApiAuth, async (req, res) => {
+// Driver renews an expired (or soon-to-expire) guest token.
+// POST /api/guest-chat/rides/:id/tokens/:tokenId/renew
+router.post("/rides/:id/tokens/:tokenId/renew", requireApiAuth, async (req, res) => {
   try {
-    const result = await guestChatService.createGuestToken(
+    const result = await guestChatService.renewGuestToken(
       req.params.id,
       req.userId,
-      req.body.guest_name,
-      req.body.guest_phone
+      req.params.tokenId
     );
-    res.status(201).json(result);
+    res.json(result);
   } catch (err) {
-    const status = err.message.includes("Only the driver") ? 403
-      : err.message.includes("not found") ? 404
-      : 400;
-    res.status(status).json({ error: err.message });
-  }
-});
-
-// Driver lists all guest tokens for a ride.
-// GET /api/guest-chat/rides/:id/tokens
-router.get("/rides/:id/tokens", requireApiAuth, async (req, res) => {
-  try {
-    const tokens = await guestChatService.listGuestTokens(req.params.id, req.userId);
-    res.json({ tokens });
-  } catch (err) {
-    const status = err.message.includes("Only the driver") ? 403
-      : err.message.includes("not found") ? 404
-      : 500;
+    const status = err.message.includes("not found") ? 404 : 400;
     res.status(status).json({ error: err.message });
   }
 });

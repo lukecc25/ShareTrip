@@ -96,17 +96,6 @@
     width: 10px;
 }
 
-/* Small red dot for the "Messages" nav bar link when there are unread chats. */
-.nav-unread-dot {
-    background: #ef4444;
-    border-radius: 50%;
-    display: inline-block;
-    height: 8px;
-    margin-left: 4px;
-    vertical-align: top;
-    width: 8px;
-}
-
 .chat-thread {
     display: flex;
     flex-direction: column;
@@ -547,6 +536,18 @@ textarea.ride-details-input {
     padding: 5px 10px;
 }
 
+.guest-link-expired {
+    color: #b91c1c;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.guest-renew-btn {
+    flex-shrink: 0;
+    font-size: 12px;
+    padding: 5px 10px;
+}
+
 .guest-empty {
     color: #94a3b8;
     font-size: 13px;
@@ -566,6 +567,16 @@ textarea.ride-details-input {
     }
 
     .guest-form-row button {
+        width: 100%;
+    }
+
+    .guest-link-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .guest-copy-btn,
+    .guest-renew-btn {
         width: 100%;
     }
 }

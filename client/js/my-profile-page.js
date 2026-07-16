@@ -15,6 +15,7 @@ let state = {
   tripHistoryExpanded: false,
   notificationsExpanded: false,
   notificationsUnreadOnly: false,
+  changingPassword: false,
 };
 
 const PHOTO_EDITOR = {
@@ -572,6 +573,38 @@ function renderProfileEditForm(profile) {
           <button type="button" class="secondary-button" data-action="cancel-edit">Cancel</button>
         </div>
       </form>
+    </section>
+    ${renderChangePasswordSection()}`;
+}
+
+function renderChangePasswordSection() {
+  if (!state.changingPassword) {
+    return `
+      <section class="profile-section" id="profile-change-password">
+        <div class="profile-section-header">
+          <h2>Change Password</h2>
+        </div>
+        <button type="button" class="secondary-button" data-action="toggle-change-password">Change password</button>
+      </section>`;
+  }
+
+  return `
+    <section class="profile-section" id="profile-change-password">
+      <div class="profile-section-header">
+        <h2>Change Password</h2>
+      </div>
+      <form class="profile-edit-form" id="changePasswordForm">
+        <label for="current-password">Current password</label>
+        <input id="current-password" name="currentPassword" type="password" autocomplete="current-password" required>
+        <label for="new-password">New password</label>
+        <input id="new-password" name="newPassword" type="password" minlength="6" autocomplete="new-password" required>
+        <label for="confirm-new-password">Confirm new password</label>
+        <input id="confirm-new-password" name="confirmNewPassword" type="password" minlength="6" autocomplete="new-password" required>
+        <div class="profile-edit-actions">
+          <button type="submit" class="primary-small-button">Update password</button>
+          <button type="button" class="secondary-button" data-action="cancel-change-password">Cancel</button>
+        </div>
+      </form>
     </section>`;
 }
 
@@ -649,8 +682,7 @@ function renderNotificationsSection() {
       </label>`
     : "";
 
-  const notificationsToggle = `<button type="button" class="profile-section-toggle" data-action="toggle-notifications" aria-expanded="${state.notificationsExpanded}" aria-controls="profile-notifications-panel">
-      <span>${state.notificationsExpanded ? "Hide notifications" : "Show notifications"}</span>
+  const notificationsToggle = `<button type="button" class="profile-section-toggle" data-action="toggle-notifications" aria-expanded="${state.notificationsExpanded}" aria-controls="profile-notifications-panel" aria-label="${state.notificationsExpanded ? "Hide notifications" : "Show notifications"}">
       <span class="profile-section-toggle-chevron${state.notificationsExpanded ? " is-open" : ""}" aria-hidden="true">▼</span>
     </button>`;
 
@@ -690,8 +722,7 @@ function renderProfilePage(data) {
   const tripsHeading = state.isOwnProfile ? "Trip history" : "Past trips";
   const tripHistoryToggle =
     tripHistory.length > 0
-      ? `<button type="button" class="profile-section-toggle" data-action="toggle-trip-history" aria-expanded="${state.tripHistoryExpanded}" aria-controls="trip-history-panel">
-          <span>${state.tripHistoryExpanded ? "Hide past rides" : "Show past rides"}</span>
+      ? `<button type="button" class="profile-section-toggle" data-action="toggle-trip-history" aria-expanded="${state.tripHistoryExpanded}" aria-controls="trip-history-panel" aria-label="${state.tripHistoryExpanded ? "Hide past rides" : "Show past rides"}">
           <span class="profile-section-toggle-chevron${state.tripHistoryExpanded ? " is-open" : ""}" aria-hidden="true">▼</span>
         </button>`
       : "";
@@ -866,6 +897,7 @@ function bindProfileEvents() {
       state.editProfilePicture = undefined;
       state.profilePhotoSource = null;
       state.photoEditorSettings = null;
+      state.changingPassword = false;
       showMessage("");
       render();
     });
@@ -879,8 +911,55 @@ function bindProfileEvents() {
       state.profilePhotoSource = null;
       state.photoEditorSettings = null;
       state.pendingAbleDriver = false;
+      state.changingPassword = false;
       showMessage("");
       render();
+    });
+  }
+
+    const togglePasswordBtn = root.querySelector('[data-action="toggle-change-password"]');
+  if (togglePasswordBtn) {
+    togglePasswordBtn.addEventListener("click", () => {
+      state.changingPassword = true;
+      showMessage("");
+      render();
+    });
+  }
+
+  const cancelPasswordBtn = root.querySelector('[data-action="cancel-change-password"]');
+  if (cancelPasswordBtn) {
+    cancelPasswordBtn.addEventListener("click", () => {
+      state.changingPassword = false;
+      showMessage("");
+      render();
+    });
+  }
+
+  const changePasswordForm = document.getElementById("changePasswordForm");
+  if (changePasswordForm) {
+    changePasswordForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const formData = new FormData(changePasswordForm);
+      const currentPassword = formData.get("currentPassword");
+      const newPassword = formData.get("newPassword");
+      const confirmNewPassword = formData.get("confirmNewPassword");
+
+      if (newPassword !== confirmNewPassword) {
+        showMessage("New password and confirmation do not match.", "error");
+        return;
+      }
+
+      try {
+        await ShareTripApi.apiFetch("/api/users/me/password", {
+          method: "PUT",
+          body: JSON.stringify({ currentPassword, newPassword }),
+        });
+        state.changingPassword = false;
+        showMessage("Your password has been updated.");
+        render();
+      } catch (error) {
+        showMessage(error.message || "Unable to update password.", "error");
+      }
     });
   }
 
@@ -922,7 +1001,7 @@ function bindProfileEvents() {
         });
         state.data.profile = updated;
         state.data.stats.able_driver = u().isAbleDriver(updated);
-        u().applyHideRequestRidesForDriverStatus(updated);
+        u().applyOffersOnlyForDriverStatus(updated);
         showMessage(
           updated.able_driver
             ? "You are marked as available to drive."
@@ -1028,7 +1107,7 @@ function bindProfileEvents() {
         });
         state.data.profile = updated;
         state.data.stats.able_driver = u().isAbleDriver(updated);
-        u().applyHideRequestRidesForDriverStatus(updated);
+        u().applyOffersOnlyForDriverStatus(updated);
         state.editing = false;
         state.editProfilePicture = undefined;
         state.profilePhotoSource = null;

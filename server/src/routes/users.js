@@ -110,4 +110,21 @@ router.get("/:userId/overview", requireApiAuth, async (req, res) => {
   }
 });
 
+router.put("/me/password", requireApiAuth, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  try {
+    await authService.changePassword(req.userId, currentPassword, newPassword);
+    res.json({ ok: true });
+  } catch (err) {
+    const status = err.message.includes("incorrect")
+      ? 401
+      : err.message.includes("required") || err.message.includes("at least")
+        ? 400
+        : err.message.includes("not found")
+          ? 404
+          : 500;
+    res.status(status).json({ error: err.message });
+  }
+});
+
 module.exports = router;

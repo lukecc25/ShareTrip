@@ -17,7 +17,6 @@ const HTML_PAGES = [
   "how-it-works.html",
   "dashboard.html",
   "my-profile.html",
-  "profile.html",
   "ride-details.html",
   "messages.html",
   "message-thread.html",
