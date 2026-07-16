@@ -2,6 +2,16 @@ function u() {
   return window.ShareTripUtils;
 }
 
+function roleLabel(role) {
+  if (role === "driver") {
+    return "Driver";
+  }
+  if (role === "owner") {
+    return "Ride owner";
+  }
+  return "Passenger";
+}
+
 let state = {
   threads: [],
   showPast: false,
@@ -35,7 +45,10 @@ function renderThreadRow(thread) {
       ${renderThreadAvatar(thread)}
       <div class="thread-info">
         <div class="thread-top-row">
-          <strong>${escapeHtml(driverName)}</strong>
+          <span class="thread-name-role">
+            <strong>${escapeHtml(driverName)}</strong>
+            <span class="trip-role-badge">${escapeHtml(roleLabel(thread.user_role))}</span>
+          </span>
           <span class="thread-date">${escapeHtml(formatDateValue(thread.start_date))}${thread.is_past ? ' <span class="thread-past-badge">Past</span>' : ""}</span>
         </div>
         <div class="thread-route">${route}</div>

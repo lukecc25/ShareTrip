@@ -288,9 +288,14 @@ function promptJoinPartySize(maxSeats = 1) {
 
     function onPartySizeChange() {
       const value = Math.floor(Number(input.value) || 1);
-      input.value = String(Math.max(1, Math.min(max, value)));
-      renderJoinGuestFields(guestFields, input.value, max);
-      showJoinError("");
+      const clamped = Math.max(1, Math.min(max, value));
+      input.value = String(clamped);
+      renderJoinGuestFields(guestFields, clamped, max);
+      if (value > max) {
+        showJoinError(`This ride only has ${max} seat${max === 1 ? "" : "s"} available. You can't add more people than that.`);
+      } else {
+        showJoinError("");
+      }
     }
 
     function cleanup() {
